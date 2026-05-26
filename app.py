@@ -47,19 +47,6 @@ def guardar():
     conn.close()
     return jsonify({'ok':True,'msg':'Datos guardados correctamente'})
 
-@app.route('/exportar')
-def exportar():
-    conn=get_conn()
-    df=pd.read_sql_query('SELECT * FROM base', conn)
-    conn.close()
-    out='BASE_ACTUALIZADA.xlsx'
-    with pd.ExcelWriter(out, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='BASE')
-    return jsonify({'archivo':out})
-
-if __name__=='__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)), debug=False)
-
 @app.route('/validar')
 def validar():
 
@@ -75,3 +62,17 @@ def validar():
     conn.close()
 
     return str(rows)
+
+@app.route('/exportar')
+def exportar():
+    conn=get_conn()
+    df=pd.read_sql_query('SELECT * FROM base', conn)
+    conn.close()
+    out='BASE_ACTUALIZADA.xlsx'
+    with pd.ExcelWriter(out, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='BASE')
+    return jsonify({'archivo':out})
+
+if __name__=='__main__':
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)), debug=False)
+
