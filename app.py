@@ -27,19 +27,37 @@ def index():
 @app.route('/consultar', methods=['POST'])
 def consultar():
 
+    data = request.json
+
+    termino = data.get('q', '')
+
     conn = get_conn()
 
-    df = pd.read_sql(
-        'SELECT * FROM base LIMIT 200',
-        conn
-    )
+    query = '''
+        SELECT *
+        FROM base
+        LIMIT 200
+    '''
+
+    df = pd.read_sql(query, conn)
 
     conn.close()
 
-    return jsonify(
-        df.fillna('').to_dict(orient='records')
-    )
+    resultados = []
 
+    for _, row in df.iterrows():
+
+        fila = {}
+
+        for col in df.columns:
+            fila[col] = '' if pd.isna(row[col]) else str(row[col])
+
+        resultados.append(fila)
+
+    return jsonify({
+        'ok': True,
+        'rows': resultados
+    })
 # =========================
 # GUARDAR CAMBIOS
 # =========================
@@ -56,6 +74,15 @@ def guardar():
 
     for u in updates:
 
+        rid = u.get('id') or u.get('rid')
+
+        piso = u.get('PISO') or u.get('piso')
+
+        ubicacion = (
+            u.get('UBICACIÓN DETALLADA')
+            or u.get('ubicacion')
+        )
+
         cur.execute(
             '''
             UPDATE base
@@ -64,9 +91,9 @@ def guardar():
             WHERE id=%s
             ''',
             (
-                u['piso'],
-                u['ubicacion'],
-                u['rid']
+                piso,
+                ubicacion,
+                rid
             )
         )
 
@@ -76,8 +103,7 @@ def guardar():
     conn.close()
 
     return jsonify({
-        'ok': True,
-        'msg': 'Datos guardados correctamente'
+        'ok': True
     })
 # =========================
 # EXPORTAR EXCEL
