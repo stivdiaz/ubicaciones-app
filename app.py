@@ -27,49 +27,18 @@ def index():
 @app.route('/consultar', methods=['POST'])
 def consultar():
 
-    data = request.json
-
-    piso = data.get('piso', '')
-    ubicacion = data.get('ubicacion', '')
-
     conn = get_conn()
 
-    query = '''
-        SELECT
-            id,
-            "PISO",
-            "UBICACIÓN DETALLADA"
-        FROM base
-        WHERE 1=1
-    '''
-
-    params = []
-
-    if piso:
-        query += ' AND "PISO" ILIKE %s'
-        params.append(f'%{piso}%')
-
-    if ubicacion:
-        query += ' AND "UBICACIÓN DETALLADA" ILIKE %s'
-        params.append(f'%{ubicacion}%')
-
-    query += ' LIMIT 200'
-
-    df = pd.read_sql(query, conn, params=params)
+    df = pd.read_sql(
+        'SELECT * FROM base LIMIT 200',
+        conn
+    )
 
     conn.close()
 
-    resultados = []
-
-    for _, row in df.iterrows():
-
-        resultados.append({
-            'rid': row['id'],
-            'piso': row['PISO'],
-            'ubicacion': row['UBICACIÓN DETALLADA']
-        })
-
-    return jsonify(resultados)
+    return jsonify(
+        df.fillna('').to_dict(orient='records')
+    )
 
 # =========================
 # GUARDAR CAMBIOS
