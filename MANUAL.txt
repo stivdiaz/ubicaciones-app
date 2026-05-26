@@ -1,0 +1,17 @@
+
+INSTALACIÓN
+
+1. Instale Python 3.11+
+2. Abra CMD en la carpeta del proyecto
+3. Ejecutar:
+pip install -r requirements.txt
+4. Ejecutar:
+python app.py
+5. Abrir:
+http://localhost:5000
+
+NOTAS:
+- Multiusuario local vía navegador
+- SQLite incluido
+- BASE ya importada
+- NOMENCLATURA ya importada
