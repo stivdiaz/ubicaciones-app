@@ -35,7 +35,10 @@ def consultar():
     conn = get_conn()
 
     query = '''
-        SELECT id, *
+        SELECT
+            id,
+            "PISO",
+            "UBICACIÓN DETALLADA"
         FROM base
         WHERE 1=1
     '''
@@ -58,7 +61,6 @@ def consultar():
 
     return jsonify(df.fillna('').to_dict(orient='records'))
 
-
 # =========================
 # GUARDAR CAMBIOS
 # =========================
@@ -73,19 +75,23 @@ def guardar():
 
     for u in updates:
 
-        cur.execute(
-            '''
+        rid = u.get('id') or u.get('rid')
+
+        piso = u.get('piso')
+        ubicacion = u.get('ubicacion')
+
+        print("ACTUALIZANDO:", rid, piso, ubicacion)
+
+        cur.execute("""
             UPDATE base
-            SET "PISO"=%s,
-                "UBICACIÓN DETALLADA"=%s
-            WHERE id=%s
-            ''',
-            (
-                u['piso'],
-                u['ubicacion'],
-                u['rid']
-            )
-        )
+            SET "PISO" = %s,
+                "UBICACIÓN DETALLADA" = %s
+            WHERE id = %s
+        """, (
+            piso,
+            ubicacion,
+            rid
+        ))
 
     conn.commit()
 
@@ -96,8 +102,6 @@ def guardar():
         'ok': True,
         'msg': 'Datos guardados correctamente'
     })
-
-
 # =========================
 # EXPORTAR EXCEL
 # =========================
