@@ -53,10 +53,44 @@ def exportar():
     conn=get_conn()
     df=pd.read_sql_query('SELECT * FROM base', conn)
     conn.close()
-    out='BASE_ACTUALIZADA.xlsx'
-    with pd.ExcelWriter(out, engine='openpyxl') as writer:
+   from flask import send_file
+import tempfile
+
+@app.route('/exportar')
+def exportar():
+
+    conn = get_conn()
+    df = pd.read_sql_query('SELECT * FROM base', conn)
+    conn.close()
+
+    temp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
+
+    with pd.ExcelWriter(temp.name, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='BASE')
-    return jsonify({'archivo':out})
+
+    return send_file(
+        temp.name,
+        as_attachment=True,
+        download_name='BASE_ACTUALIZADA.xlsx'
+    )
+3. IMPORTANTE
+
+Arriba del archivo asegúrate de tener:
+
+from flask import send_file
+import tempfile
+4. Commit changes
+5. Espera redeploy automático
+6. Prueba otra vez
+
+Abre:
+
+https://ubicaciones-app-qzsy.onrender.com/exportar
+Resultado esperado
+
+Ahora debería descargarse automáticamente:
+
+BASE_ACTUALIZADA.xlsx
 
 if __name__=='__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)), debug=False)
