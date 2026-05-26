@@ -59,7 +59,17 @@ def consultar():
 
     conn.close()
 
-    return jsonify(df.fillna('').to_dict(orient='records'))
+    resultados = []
+
+    for _, row in df.iterrows():
+
+        resultados.append({
+            'rid': row['id'],
+            'piso': row['PISO'],
+            'ubicacion': row['UBICACIÓN DETALLADA']
+        })
+
+    return jsonify(resultados)
 
 # =========================
 # GUARDAR CAMBIOS
@@ -68,30 +78,28 @@ def consultar():
 def guardar():
 
     data = request.json
+
     updates = data.get('updates', [])
 
     conn = get_conn()
+
     cur = conn.cursor()
 
     for u in updates:
 
-        rid = u.get('id') or u.get('rid')
-
-        piso = u.get('piso')
-        ubicacion = u.get('ubicacion')
-
-        print("ACTUALIZANDO:", rid, piso, ubicacion)
-
-        cur.execute("""
+        cur.execute(
+            '''
             UPDATE base
-            SET "PISO" = %s,
-                "UBICACIÓN DETALLADA" = %s
-            WHERE id = %s
-        """, (
-            piso,
-            ubicacion,
-            rid
-        ))
+            SET "PISO"=%s,
+                "UBICACIÓN DETALLADA"=%s
+            WHERE id=%s
+            ''',
+            (
+                u['piso'],
+                u['ubicacion'],
+                u['rid']
+            )
+        )
 
     conn.commit()
 
