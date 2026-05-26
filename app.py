@@ -1,7 +1,8 @@
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 import sqlite3
 import os
+import tempfile
 
 app = Flask(__name__)
 DB='database.db'
@@ -47,14 +48,6 @@ def guardar():
     conn.commit()
     conn.close()
     return jsonify({'ok':True,'msg':'Datos guardados correctamente'})
-
-@app.route('/exportar')
-def exportar():
-    conn=get_conn()
-    df=pd.read_sql_query('SELECT * FROM base', conn)
-    conn.close()
-   from flask import send_file
-import tempfile
 
 @app.route('/exportar')
 def exportar():
