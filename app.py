@@ -59,3 +59,28 @@ def exportar():
 
 if __name__=='__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)), debug=False)
+@app.route('/datos')
+def ver_datos():
+    conn = get_conn()
+    datos = conn.execute('SELECT * FROM base').fetchall()
+    conn.close()
+
+    html = "<h1>Datos almacenados</h1><table border=1>"
+
+    if datos:
+        columnas = datos[0].keys()
+
+        html += "<tr>"
+        for col in columnas:
+            html += f"<th>{col}</th>"
+        html += "</tr>"
+
+        for fila in datos:
+            html += "<tr>"
+            for valor in fila:
+                html += f"<td>{valor}</td>"
+            html += "</tr>"
+
+    html += "</table>"
+
+    return html
