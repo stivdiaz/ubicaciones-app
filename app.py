@@ -58,9 +58,34 @@ def validar():
 
     rows = cur.fetchall()
 
+    columnas = [desc[0] for desc in cur.description]
+
+    html = """
+    <h1>Datos almacenados</h1>
+    <table border="1" cellpadding="5">
+    <tr>
+    """
+
+    for col in columnas:
+        html += f"<th>{col}</th>"
+
+    html += "</tr>"
+
+    for row in rows:
+
+        html += "<tr>"
+
+        for val in row:
+            html += f"<td>{val}</td>"
+
+        html += "</tr>"
+
+    html += "</table>"
+
     cur.close()
     conn.close()
 
+    return html
     return str(rows)
 
 if __name__=='__main__':
