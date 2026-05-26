@@ -6,15 +6,19 @@ import tempfile
 
 app = Flask(__name__)
 
+
 # =========================
 # CONEXIÓN POSTGRESQL
 # =========================
 def get_conn():
-    return psycopg2.connect(os.environ.get("DATABASE_URL"))
+
+    return psycopg2.connect(
+        os.environ.get("DATABASE_URL")
+    )
 
 
 # =========================
-# INICIO
+# HOME
 # =========================
 @app.route('/')
 def index():
@@ -22,42 +26,65 @@ def index():
 
 
 # =========================
-# CONSULTAR DATOS
+# BUSCAR DOCUMENTO
 # =========================
-@app.route('/consultar', methods=['POST'])
-def consultar():
+@app.route('/buscar')
+def buscar():
 
-    data = request.json
-
-    termino = data.get('q', '')
+    doc = request.args.get('doc', '')
 
     conn = get_conn()
 
     query = '''
         SELECT *
         FROM base
-        LIMIT 200
+        WHERE CAST("DOCUMENTO" AS TEXT) ILIKE %s
+        LIMIT 50
     '''
 
-    df = pd.read_sql(query, conn)
+    df = pd.read_sql(
+        query,
+        conn,
+        params=[f'%{doc}%']
+    )
 
     conn.close()
 
-    resultados = []
+    return jsonify(
+        df.fillna('').to_dict(orient='records')
+    )
 
-    for _, row in df.iterrows():
 
-        fila = {}
+# =========================
+# BUSCAR UBICACIONES
+# =========================
+@app.route('/ubicaciones')
+def ubicaciones():
 
-        for col in df.columns:
-            fila[col] = '' if pd.isna(row[col]) else str(row[col])
+    piso = request.args.get('piso', '')
 
-        resultados.append(fila)
+    conn = get_conn()
 
-    return jsonify({
-        'ok': True,
-        'rows': resultados
-    })
+    query = '''
+        SELECT *
+        FROM base
+        WHERE "PISO" ILIKE %s
+        LIMIT 200
+    '''
+
+    df = pd.read_sql(
+        query,
+        conn,
+        params=[f'%{piso}%']
+    )
+
+    conn.close()
+
+    return jsonify(
+        df.fillna('').to_dict(orient='records')
+    )
+
+
 # =========================
 # GUARDAR CAMBIOS
 # =========================
@@ -76,11 +103,11 @@ def guardar():
 
         rid = u.get('id') or u.get('rid')
 
-        piso = u.get('PISO') or u.get('piso')
+        piso = u.get('piso') or u.get('PISO')
 
         ubicacion = (
-            u.get('UBICACIÓN DETALLADA')
-            or u.get('ubicacion')
+            u.get('ubicacion')
+            or u.get('UBICACIÓN DETALLADA')
         )
 
         cur.execute(
@@ -100,20 +127,27 @@ def guardar():
     conn.commit()
 
     cur.close()
+
     conn.close()
 
     return jsonify({
-        'ok': True
+        'ok': True,
+        'msg': 'Datos guardados correctamente'
     })
+
+
 # =========================
-# EXPORTAR EXCEL
+# EXPORTAR
 # =========================
 @app.route('/exportar')
 def exportar():
 
     conn = get_conn()
 
-    df = pd.read_sql('SELECT * FROM base', conn)
+    df = pd.read_sql(
+        'SELECT * FROM base',
+        conn
+    )
 
     conn.close()
 
@@ -122,7 +156,11 @@ def exportar():
         suffix='.xlsx'
     )
 
-    with pd.ExcelWriter(temp.name, engine='openpyxl') as writer:
+    with pd.ExcelWriter(
+        temp.name,
+        engine='openpyxl'
+    ) as writer:
+
         df.to_excel(
             writer,
             index=False,
@@ -137,7 +175,7 @@ def exportar():
 
 
 # =========================
-# VALIDAR DATOS
+# VALIDAR
 # =========================
 @app.route('/validar')
 def validar():
@@ -145,13 +183,7 @@ def validar():
     conn = get_conn()
 
     df = pd.read_sql(
-        '''
-        SELECT id,
-               "PISO",
-               "UBICACIÓN DETALLADA"
-        FROM base
-        LIMIT 20
-        ''',
+        'SELECT * FROM base LIMIT 50',
         conn
     )
 
@@ -164,4 +196,8 @@ def validar():
 # MAIN
 # =========================
 if __name__ == '__main__':
-    app.run(debug=True)
+
+    app.run(
+        host='0.0.0.0',
+        port=int(os.environ.get('PORT', 10000))
+    )
