@@ -1,7 +1,6 @@
 
 from flask import Flask, render_template, request, jsonify
 import sqlite3
-import pandas as pd
 import os
 
 app = Flask(__name__)
