@@ -119,6 +119,25 @@ def validar():
 
     return html
     return str(rows)
+@app.route('/crear_id')
+def crear_id():
+
+    conn = get_conn()
+
+    cur = conn.cursor()
+
+    cur.execute("""
+        ALTER TABLE base
+        ADD COLUMN id SERIAL
+    """)
+
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+    return "Columna ID creada"
+
 
 if __name__=='__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)), debug=False)
