@@ -34,18 +34,50 @@ def ubicaciones():
 
 @app.route('/guardar', methods=['POST'])
 def guardar():
-    data=request.json
-    updates=data.get('updates',[])
+
+    data = request.json
+
+    updates = data.get('updates', [])
+
     for u in updates:
+
         if not u.get('piso') or not u.get('ubicacion'):
-            return jsonify({'ok':False,'msg':'Debe completar todas las filas'}),400
-    conn=get_conn()
+
+            return jsonify({
+                'ok': False,
+                'msg': 'Debe completar todas las filas'
+            }), 400
+
+    conn = get_conn()
+
+    cur = conn.cursor()
+
     for u in updates:
-        conn.execute('UPDATE base SET [PISO]=?, [UBICACIÓN DETALLADA]=? WHERE rowid=?',
-                     (u['piso'],u['ubicacion'],u['rid']))
+
+        cur.execute(
+            '''
+            UPDATE base
+            SET "PISO"=%s,
+                "UBICACIÓN DETALLADA"=%s
+            WHERE id=%s
+            ''',
+            (
+                u['piso'],
+                u['ubicacion'],
+                u['rid']
+            )
+        )
+
     conn.commit()
+
+    cur.close()
+
     conn.close()
-    return jsonify({'ok':True,'msg':'Datos guardados correctamente'})
+
+    return jsonify({
+        'ok': True,
+        'msg': 'Datos guardados correctamente'
+    })
 
 @app.route('/validar')
 def validar():
