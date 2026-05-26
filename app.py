@@ -1,55 +1,74 @@
-from flask import Flask, render_template, request, jsonify
-import sqlite3
+from flask import Flask, render_template, request, jsonify, send_file
+import pandas as pd
+import psycopg2
 import os
+import tempfile
 
 app = Flask(__name__)
-DB='database.db'
 
+# =========================
+# CONEXIÓN POSTGRESQL
+# =========================
 def get_conn():
-    conn=sqlite3.connect(DB)
-    conn.row_factory=sqlite3.Row
-    return conn
+    return psycopg2.connect(os.environ.get("DATABASE_URL"))
 
+
+# =========================
+# INICIO
+# =========================
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/buscar')
-def buscar():
-    doc=request.args.get('doc')
-    conn=get_conn()
-    q='SELECT rowid as rid, * FROM base WHERE [Doc. Identidad]=?'
-    rows=[dict(r) for r in conn.execute(q,(doc,)).fetchall()]
-    pisos=[r[0] for r in conn.execute('SELECT DISTINCT Piso FROM nomenclatura WHERE Piso IS NOT NULL ORDER BY Piso').fetchall()]
-    conn.close()
-    return jsonify({'rows':rows,'pisos':pisos})
 
-@app.route('/ubicaciones')
-def ubicaciones():
-    piso=request.args.get('piso')
-    conn=get_conn()
-    data=[r[0] for r in conn.execute('SELECT DISTINCT [Ubicación Detallada] FROM nomenclatura WHERE Piso=? ORDER BY [Ubicación Detallada]',(piso,)).fetchall()]
-    conn.close()
-    return jsonify(data)
+# =========================
+# CONSULTAR DATOS
+# =========================
+@app.route('/consultar', methods=['POST'])
+def consultar():
 
+    data = request.json
+
+    piso = data.get('piso', '')
+    ubicacion = data.get('ubicacion', '')
+
+    conn = get_conn()
+
+    query = '''
+        SELECT id, *
+        FROM base
+        WHERE 1=1
+    '''
+
+    params = []
+
+    if piso:
+        query += ' AND "PISO" ILIKE %s'
+        params.append(f'%{piso}%')
+
+    if ubicacion:
+        query += ' AND "UBICACIÓN DETALLADA" ILIKE %s'
+        params.append(f'%{ubicacion}%')
+
+    query += ' LIMIT 200'
+
+    df = pd.read_sql(query, conn, params=params)
+
+    conn.close()
+
+    return jsonify(df.fillna('').to_dict(orient='records'))
+
+
+# =========================
+# GUARDAR CAMBIOS
+# =========================
 @app.route('/guardar', methods=['POST'])
 def guardar():
 
     data = request.json
-
     updates = data.get('updates', [])
 
-    for u in updates:
-
-        if not u.get('piso') or not u.get('ubicacion'):
-
-            return jsonify({
-                'ok': False,
-                'msg': 'Debe completar todas las filas'
-            }), 400
-
     conn = get_conn()
-
     cur = conn.cursor()
 
     for u in updates:
@@ -71,7 +90,6 @@ def guardar():
     conn.commit()
 
     cur.close()
-
     conn.close()
 
     return jsonify({
@@ -79,66 +97,64 @@ def guardar():
         'msg': 'Datos guardados correctamente'
     })
 
+
+# =========================
+# EXPORTAR EXCEL
+# =========================
+@app.route('/exportar')
+def exportar():
+
+    conn = get_conn()
+
+    df = pd.read_sql('SELECT * FROM base', conn)
+
+    conn.close()
+
+    temp = tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix='.xlsx'
+    )
+
+    with pd.ExcelWriter(temp.name, engine='openpyxl') as writer:
+        df.to_excel(
+            writer,
+            index=False,
+            sheet_name='BASE'
+        )
+
+    return send_file(
+        temp.name,
+        as_attachment=True,
+        download_name='BASE_ACTUALIZADA.xlsx'
+    )
+
+
+# =========================
+# VALIDAR DATOS
+# =========================
 @app.route('/validar')
 def validar():
 
     conn = get_conn()
 
-    cur = conn.cursor()
+    df = pd.read_sql(
+        '''
+        SELECT id,
+               "PISO",
+               "UBICACIÓN DETALLADA"
+        FROM base
+        LIMIT 20
+        ''',
+        conn
+    )
 
-    cur.execute("SELECT * FROM base")
-
-    rows = cur.fetchall()
-
-    columnas = [desc[0] for desc in cur.description]
-
-    html = """
-    <h1>Datos almacenados</h1>
-    <table border="1" cellpadding="5">
-    <tr>
-    """
-
-    for col in columnas:
-        html += f"<th>{col}</th>"
-
-    html += "</tr>"
-
-    for row in rows:
-
-        html += "<tr>"
-
-        for val in row:
-            html += f"<td>{val}</td>"
-
-        html += "</tr>"
-
-    html += "</table>"
-
-    cur.close()
     conn.close()
 
-    return html
-    return str(rows)
-@app.route('/crear_id')
-def crear_id():
-
-    conn = get_conn()
-
-    cur = conn.cursor()
-
-    cur.execute("""
-        ALTER TABLE base
-        ADD COLUMN id SERIAL
-    """)
-
-    conn.commit()
-
-    cur.close()
-    conn.close()
-
-    return "Columna ID creada"
+    return df.to_html(index=False)
 
 
-if __name__=='__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)), debug=False)
-
+# =========================
+# MAIN
+# =========================
+if __name__ == '__main__':
+    app.run(debug=True)
