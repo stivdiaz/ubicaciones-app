@@ -1,48 +1,36 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify
+import sqlite3
 import pandas as pd
-import psycopg2
 import os
-import tempfile
 
 app = Flask(__name__)
 
+DB_PATH = 'database.db'
 
-# =========================
-# CONEXIÓN POSTGRESQL
-# =========================
 def get_conn():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-    return psycopg2.connect(
-        os.environ.get("DATABASE_URL")
-    )
-
-
-# =========================
-# HOME
-# =========================
 @app.route('/')
 def index():
     return render_template('index.html')
 
-
-# =========================
-# BUSCAR DOCUMENTO
-# =========================
 @app.route('/buscar')
 def buscar():
 
-    doc = request.args.get('doc', '')
+    doc = request.args.get('doc', '').strip()
 
     conn = get_conn()
 
-    query = '''
-        SELECT *
+    query = """
+        SELECT rowid as rid, *
         FROM base
-        WHERE CAST("DOCUMENTO" AS TEXT) ILIKE %s
-        LIMIT 50
-    '''
+        WHERE CAST([Doc. Identidad] AS TEXT) LIKE ?
+        LIMIT 100
+    """
 
-    df = pd.read_sql(
+    df = pd.read_sql_query(
         query,
         conn,
         params=[f'%{doc}%']
@@ -54,150 +42,134 @@ def buscar():
         df.fillna('').to_dict(orient='records')
     )
 
-
-# =========================
-# BUSCAR UBICACIONES
-# =========================
-@app.route('/ubicaciones')
-def ubicaciones():
-
-    piso = request.args.get('piso', '')
+@app.route('/pisos')
+def pisos():
 
     conn = get_conn()
 
-    query = '''
-        SELECT *
+    query = """
+        SELECT DISTINCT [PISO]
         FROM base
-        WHERE "PISO" ILIKE %s
-        LIMIT 200
-    '''
+        WHERE [PISO] IS NOT NULL
+          AND TRIM([PISO]) <> ''
+        ORDER BY [PISO]
+    """
 
-    df = pd.read_sql(
+    df = pd.read_sql_query(query, conn)
+
+    conn.close()
+
+    pisos = (
+        df['PISO']
+        .dropna()
+        .astype(str)
+        .str.strip()
+        .unique()
+        .tolist()
+    )
+
+    return jsonify(pisos)
+
+@app.route('/ubicaciones')
+def ubicaciones():
+
+    piso = request.args.get('piso', '').strip()
+
+    conn = get_conn()
+
+    query = """
+        SELECT DISTINCT [UBICACIÓN DETALLADA]
+        FROM base
+        WHERE [PISO] = ?
+          AND [UBICACIÓN DETALLADA] IS NOT NULL
+          AND TRIM([UBICACIÓN DETALLADA]) <> ''
+        ORDER BY [UBICACIÓN DETALLADA]
+    """
+
+    df = pd.read_sql_query(
         query,
         conn,
-        params=[f'%{piso}%']
+        params=[piso]
     )
 
     conn.close()
 
-    return jsonify(
-        df.fillna('').to_dict(orient='records')
+    ubicaciones = (
+        df['UBICACIÓN DETALLADA']
+        .dropna()
+        .astype(str)
+        .str.strip()
+        .unique()
+        .tolist()
     )
 
+    return jsonify(ubicaciones)
 
-# =========================
-# GUARDAR CAMBIOS
-# =========================
 @app.route('/guardar', methods=['POST'])
 def guardar():
 
     data = request.json
-
     updates = data.get('updates', [])
 
-    conn = get_conn()
+    if not updates:
+        return jsonify({
+            'ok': False,
+            'msg': 'No hay datos para guardar'
+        }), 400
 
+    conn = get_conn()
     cur = conn.cursor()
 
-    for u in updates:
+    try:
 
-        rid = u.get('id') or u.get('rid')
+        for u in updates:
 
-        piso = u.get('piso') or u.get('PISO')
+            rid = u.get('rid')
+            piso = str(u.get('piso', '')).strip()
+            ubicacion = str(u.get('ubicacion', '')).strip()
 
-        ubicacion = (
-            u.get('ubicacion')
-            or u.get('UBICACIÓN DETALLADA')
-        )
+            if not piso or not ubicacion:
 
-        cur.execute(
-            '''
-            UPDATE base
-            SET "PISO"=%s,
-                "UBICACIÓN DETALLADA"=%s
-            WHERE id=%s
-            ''',
-            (
-                piso,
-                ubicacion,
-                rid
+                conn.close()
+
+                return jsonify({
+                    'ok': False,
+                    'msg': 'Debe completar todas las filas'
+                }), 400
+
+            cur.execute(
+                """
+                UPDATE base
+                SET [PISO] = ?,
+                    [UBICACIÓN DETALLADA] = ?
+                WHERE rowid = ?
+                """,
+                (
+                    piso,
+                    ubicacion,
+                    rid
+                )
             )
-        )
 
-    conn.commit()
+        conn.commit()
 
-    cur.close()
+    except Exception as e:
 
-    conn.close()
+        conn.rollback()
+
+        return jsonify({
+            'ok': False,
+            'msg': str(e)
+        }), 500
+
+    finally:
+
+        conn.close()
 
     return jsonify({
         'ok': True,
         'msg': 'Datos guardados correctamente'
     })
 
-
-# =========================
-# EXPORTAR
-# =========================
-@app.route('/exportar')
-def exportar():
-
-    conn = get_conn()
-
-    df = pd.read_sql(
-        'SELECT * FROM base',
-        conn
-    )
-
-    conn.close()
-
-    temp = tempfile.NamedTemporaryFile(
-        delete=False,
-        suffix='.xlsx'
-    )
-
-    with pd.ExcelWriter(
-        temp.name,
-        engine='openpyxl'
-    ) as writer:
-
-        df.to_excel(
-            writer,
-            index=False,
-            sheet_name='BASE'
-        )
-
-    return send_file(
-        temp.name,
-        as_attachment=True,
-        download_name='BASE_ACTUALIZADA.xlsx'
-    )
-
-
-# =========================
-# VALIDAR
-# =========================
-@app.route('/validar')
-def validar():
-
-    conn = get_conn()
-
-    df = pd.read_sql(
-        'SELECT * FROM base LIMIT 50',
-        conn
-    )
-
-    conn.close()
-
-    return df.to_html(index=False)
-
-
-# =========================
-# MAIN
-# =========================
 if __name__ == '__main__':
-
-    app.run(
-        host='0.0.0.0',
-        port=int(os.environ.get('PORT', 10000))
-    )
+    app.run(host='0.0.0.0', port=5000)
