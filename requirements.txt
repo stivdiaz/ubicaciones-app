@@ -1,4 +1,2 @@
-flask
-pandas==2.1.4
-openpyxl
-gunicorn
+Flask==3.0.2
+gunicorn==21.2.0
