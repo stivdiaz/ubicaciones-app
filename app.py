@@ -1,15 +1,16 @@
-
 from flask import Flask, render_template, request, jsonify
+import sqlite3
 import pandas as pd
-import psycopg2
 import os
 
 app = Flask(__name__)
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DB_PATH = 'database.db'
 
 def get_conn():
-    return psycopg2.connect(DATABASE_URL)
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 @app.route('/')
 def index():
@@ -18,18 +19,18 @@ def index():
 @app.route('/buscar')
 def buscar():
 
-    doc = request.args.get('doc', '')
+    doc = request.args.get('doc', '').strip()
 
     conn = get_conn()
 
-    query = '''
-        SELECT *
+    query = """
+        SELECT rowid as rid, *
         FROM base
-        WHERE CAST("Doc. Identidad" AS TEXT) ILIKE %s
-        LIMIT 50
-    '''
+        WHERE CAST([Doc. Identidad] AS TEXT) LIKE ?
+        LIMIT 100
+    """
 
-    df = pd.read_sql(
+    df = pd.read_sql_query(
         query,
         conn,
         params=[f'%{doc}%']
@@ -41,21 +42,51 @@ def buscar():
         df.fillna('').to_dict(orient='records')
     )
 
-@app.route('/ubicaciones')
-def ubicaciones():
-
-    piso = request.args.get('piso', '')
+@app.route('/pisos')
+def pisos():
 
     conn = get_conn()
 
-    query = '''
-        SELECT DISTINCT "UBICACIÓN DETALLADA"
+    query = """
+        SELECT DISTINCT [PISO]
         FROM base
-        WHERE piso = %s
-        ORDER BY "UBICACIÓN DETALLADA"
-    '''
+        WHERE [PISO] IS NOT NULL
+          AND TRIM([PISO]) <> ''
+        ORDER BY [PISO]
+    """
 
-    df = pd.read_sql(
+    df = pd.read_sql_query(query, conn)
+
+    conn.close()
+
+    pisos = (
+        df['PISO']
+        .dropna()
+        .astype(str)
+        .str.strip()
+        .unique()
+        .tolist()
+    )
+
+    return jsonify(pisos)
+
+@app.route('/ubicaciones')
+def ubicaciones():
+
+    piso = request.args.get('piso', '').strip()
+
+    conn = get_conn()
+
+    query = """
+        SELECT DISTINCT [UBICACIÓN DETALLADA]
+        FROM base
+        WHERE [PISO] = ?
+          AND [UBICACIÓN DETALLADA] IS NOT NULL
+          AND TRIM([UBICACIÓN DETALLADA]) <> ''
+        ORDER BY [UBICACIÓN DETALLADA]
+    """
+
+    df = pd.read_sql_query(
         query,
         conn,
         params=[piso]
@@ -63,29 +94,16 @@ def ubicaciones():
 
     conn.close()
 
-    return jsonify(
-        df['UBICACIÓN DETALLADA'].dropna().unique().tolist()
+    ubicaciones = (
+        df['UBICACIÓN DETALLADA']
+        .dropna()
+        .astype(str)
+        .str.strip()
+        .unique()
+        .tolist()
     )
 
-@app.route('/pisos')
-def pisos():
-
-    conn = get_conn()
-
-    query = '''
-        SELECT DISTINCT piso
-        FROM base
-        WHERE piso IS NOT NULL
-        ORDER BY piso
-    '''
-
-    df = pd.read_sql(query, conn)
-
-    conn.close()
-
-    return jsonify(
-        df['piso'].dropna().unique().tolist()
-    )
+    return jsonify(ubicaciones)
 
 @app.route('/guardar', methods=['POST'])
 def guardar():
@@ -93,40 +111,60 @@ def guardar():
     data = request.json
     updates = data.get('updates', [])
 
+    if not updates:
+        return jsonify({
+            'ok': False,
+            'msg': 'No hay datos para guardar'
+        }), 400
+
     conn = get_conn()
     cur = conn.cursor()
 
-    for u in updates:
+    try:
 
-        rid = u.get('id')
+        for u in updates:
 
-        piso = u.get('piso')
-        ubicacion = u.get('ubicacion')
+            rid = u.get('rid')
+            piso = str(u.get('piso', '')).strip()
+            ubicacion = str(u.get('ubicacion', '')).strip()
 
-        if not piso or not ubicacion:
-            return jsonify({
-                'ok': False,
-                'msg': 'Debe completar todas las filas'
-            }), 400
+            if not piso or not ubicacion:
 
-        cur.execute(
-            '''
-            UPDATE base
-            SET piso=%s,
-                "UBICACIÓN DETALLADA"=%s
-            WHERE id=%s
-            ''',
-            (
-                piso,
-                ubicacion,
-                rid
+                conn.close()
+
+                return jsonify({
+                    'ok': False,
+                    'msg': 'Debe completar todas las filas'
+                }), 400
+
+            cur.execute(
+                """
+                UPDATE base
+                SET [PISO] = ?,
+                    [UBICACIÓN DETALLADA] = ?
+                WHERE rowid = ?
+                """,
+                (
+                    piso,
+                    ubicacion,
+                    rid
+                )
             )
-        )
 
-    conn.commit()
+        conn.commit()
 
-    cur.close()
-    conn.close()
+    except Exception as e:
+
+        conn.rollback()
+
+        return jsonify({
+            'ok': False,
+            'msg': str(e)
+        }), 500
+
+    finally:
+
+        conn.close()
 
     return jsonify({
         'ok': True,
