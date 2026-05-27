@@ -1,70 +1,155 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-<meta charset="utf-8">
-<title>Ubicaciones</title>
-<style>
-body{font-family:Arial;margin:30px}
-table{border-collapse:collapse;width:100%;margin-top:20px}
-th,td{border:1px solid #ccc;padding:8px}
-button{padding:8px 12px}
-</style>
+    <meta charset="utf-8">
+    <title>Ubicaciones</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; background-color: #f9f9f9; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; margin-bottom: 20px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        button:hover { background-color: #0056b3; }
+        input { padding: 8px; width: 200px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .actions { margin-top: 15px; }
+        select { padding: 5px; width: 100%; box-sizing: border-box; }
+    </style>
 </head>
 <body>
-<h2>Actualización de Ubicaciones</h2>
-<input id="doc" type="number" placeholder="Doc. Identidad">
-<button onclick="buscar()">Buscar</button>
-<div id="msg"></div>
-<table id="tbl"></table>
-<button id="guardarBtn" style="display:none" onclick="guardar()">Guardar</button>
+
+<div class="container">
+    <h2>Actualización de Ubicaciones</h2>
+    <div>
+        <input id="doc" type="number" placeholder="Doc. Identidad">
+        <button onclick="buscar()">Buscar</button>
+    </div>
+    
+    <div id="msg"></div>
+    <table id="tbl"></table>
+    
+    <div class="actions">
+        <button id="guardarBtn" style="display:none" onclick="guardar()">Guardar</button>
+    </div>
+</div>
 
 <script>
-let pisos=[];
+let pisos = [];
+
 async function buscar(){
- let doc=document.getElementById('doc').value;
- let r=await fetch('/buscar?doc='+doc);
- let data=await r.json();
- pisos=data.pisos;
- let tbl=document.getElementById('tbl');
- tbl.innerHTML='';
- if(data.rows.length===0){tbl.innerHTML='<tr><td>No hay registros</td></tr>'; return;}
- let h='<tr><th>Etiqueta</th><th>Doc</th><th>Piso</th><th>Ubicación</th></tr>';
- for(let row of data.rows){
-  h+=`<tr data-rid="${row.rid}">
-  <td>${row['Etiqueta']||''}</td>
-  <td>${row['Doc. Identidad']||''}</td>
-  <td><select onchange="loadUbic(this)"><option value="">Seleccione</option>${pisos.map(p=>`<option ${row['PISO']==p?'selected':''}>${p}</option>`).join('')}</select></td>
-  <td><select><option>${row['UBICACIÓN DETALLADA']||'Seleccione'}</option></select></td></tr>`;
- }
- tbl.innerHTML=h;
- document.getElementById('guardarBtn').style.display='inline';
+    let doc = document.getElementById('doc').value;
+    if(!doc) { alert('Por favor, ingrese un documento.'); return; }
+    
+    let r = await fetch('/buscar?doc=' + doc);
+    let data = await r.json();
+    pisos = data.pisos;
+    
+    let tbl = document.getElementById('tbl');
+    tbl.innerHTML = '';
+    
+    if(data.rows.length === 0){
+        tbl.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay registros para el documento ingresado</td></tr>'; 
+        document.getElementById('guardarBtn').style.display = 'none';
+        return;
+    }
+    
+    // ORDEN EXACTO SOLICITADO: Etiqueta, Descr. Detallada, Departamento, Proyecto, PISO, UBICACIÓN DETALLADA
+    let h = `<tr>
+        <th>Etiqueta</th>
+        <th>Descr. Detallada</th>
+        <th>Departamento</th>
+        <th>Proyecto</th>
+        <th>PISO</th>
+        <th>UBICACIÓN DETALLADA</th>
+    </tr>`;
+    
+    for(let row of data.rows){
+        h += `<tr data-rid="${row.rid}">
+            <td>${row['Etiqueta'] || ''}</td>
+            <td>${row['Descr. Detallada'] || ''}</td>
+            <td>${row['Departamento'] || ''}</td>
+            <td>${row['Proyecto'] || ''}</td>
+            <td>
+                <select onchange="loadUbic(this)">
+                    <option value="">Seleccione</option>
+                    \${pisos.map(p => `<option value="\${p}" \${row['PISO'] == p ? 'selected' : ''}>\${p}</option>`).join('')}
+                </select>
+            </td>
+            <td>
+                <select>
+                    <option value="\${row['UBICACIÓN DETALLADA'] || ''}">\${row['UBICACIÓN DETALLADA'] || 'Seleccione'}</option>
+                </select>
+            </td>
+        </tr>`;
+    }
+    
+    tbl.innerHTML = h;
+    document.getElementById('guardarBtn').style.display = 'inline-block';
+    
+    // Auto-cargar las ubicaciones detalladas si ya venía un piso seleccionado por defecto
+    let rows = document.querySelectorAll('#tbl tr[data-rid]');
+    for(let r of rows){
+        let selPiso = r.cells[4].querySelector('select');
+        if(selPiso.value) {
+            await actualizarDropdownUbicacion(selPiso, r.cells[5].querySelector('select').value);
+        }
+    }
 }
+
 async function loadUbic(sel){
- let piso=sel.value;
- let r=await fetch('/ubicaciones?piso='+encodeURIComponent(piso));
- let data=await r.json();
- let s=sel.parentElement.parentElement.cells[3].querySelector('select');
- s.innerHTML='<option value="">Seleccione</option>'+data.map(x=>`<option>${x}</option>`).join('');
+    await actualizarDropdownUbicacion(sel, '');
 }
+
+async function actualizarDropdownUbicacion(sel, valorSeleccionado) {
+    let piso = sel.value;
+    let cellUbic = sel.parentElement.parentElement.cells[5];
+    let s = cellUbic.querySelector('select');
+    
+    if(!piso) {
+        s.innerHTML = '<option value="">Seleccione</option>';
+        return;
+    }
+    
+    let r = await fetch('/ubicaciones?piso=' + encodeURIComponent(piso));
+    let data = await r.json();
+    
+    let options = '<option value="">Seleccione</option>';
+    options += data.map(x => `<option value="\${x}" \${x === valorSeleccionado ? 'selected' : ''}>\${x}</option>`).join('');
+    s.innerHTML = options;
+}
+
 async function guardar(){
- let rows=document.querySelectorAll('#tbl tr[data-rid]');
- let updates=[];
- for(let r of rows){
-   let rid=r.dataset.rid;
-   let piso=r.cells[2].querySelector('select').value;
-   let ubi=r.cells[3].querySelector('select').value;
-   if(!piso || !ubi){alert('Debe completar todas las filas'); return;}
-   updates.push({rid,piso,ubicacion:ubi});
- }
- let res=await fetch('/guardar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({updates})});
- let d=await res.json();
- alert(d.msg);
- document.getElementById('doc').value='';
- document.getElementById('tbl').innerHTML='';
- document.getElementById('guardarBtn').style.display='none';
+    let rows = document.querySelectorAll('#tbl tr[data-rid]');
+    let updates = [];
+    
+    for(let r of rows){
+        let rid = r.dataset.rid;
+        let piso = r.cells[4].querySelector('select').value;
+        let ubi = r.cells[5].querySelector('select').value;
+        
+        if(!piso || !ubi){
+            alert('Debe completar todas las filas con Piso y Ubicación Detallada.'); 
+            return;
+        }
+        updates.push({rid, piso, ubicacion: ubi});
+    }
+    
+    let res = await fetch('/guardar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates })
+    });
+    
+    let d = await res.json();
+    alert(d.msg);
+    
+    if(d.ok) {
+        // Limpieza completa del formulario al guardar con éxito
+        document.getElementById('doc').value = '';
+        document.getElementById('tbl').innerHTML = '';
+        document.getElementById('guardarBtn').style.display = 'none';
+    }
 }
 </script>
 </body>
 </html>
-
