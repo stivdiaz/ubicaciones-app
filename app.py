@@ -40,7 +40,7 @@ def validar():
     x = c()
 
     rows = x.execute(
-        'SELECT * FROM base LIMIT 100'
+        'SELECT * FROM base'
     ).fetchall()
 
     x.close()
