@@ -99,7 +99,7 @@ def validar():
 
     <head>
 
-        <title>Validación</title>
+        <title>Reporte</title>
 
         <style>
 
@@ -141,7 +141,7 @@ def validar():
 
     <body>
 
-    <h2>Datos almacenados</h2>
+    <h2>Validación Datos almacenados</h2>
 
     <a href="/excel">
 
