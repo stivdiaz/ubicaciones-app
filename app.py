@@ -37,12 +37,15 @@ def g():
 @app.route('/validar')
 def validar():
 
-    conn = get_conn()
+    x = c()
 
-    rows = conn.execute('SELECT * FROM base LIMIT 50').fetchall()
+    rows = [
+        dict(r)
+        for r in x.execute(
+            'SELECT * FROM base LIMIT 50'
+        ).fetchall()
+    ]
 
-    conn.close()
+    x.close()
 
-    data = [dict(r) for r in rows]
-
-    return jsonify(data)
+    return jsonify(rows)
