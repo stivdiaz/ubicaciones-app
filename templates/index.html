@@ -40,8 +40,10 @@ async function guardar(){
  let r=await fetch('/guardar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({updates:ups})});
  let d=await r.json(); 
     alert(d.msg); 
-   document.getElementById('doc').value = '';
+    document.getElementById('doc').value='';
 
-    document.getElementById('resultado').innerHTML = '';
+    document.getElementById('tbl').innerHTML='';
+
+    document.getElementById('g').style.display='none';
 }
 </script></body></html>
