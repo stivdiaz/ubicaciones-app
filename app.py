@@ -1,5 +1,7 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 import sqlite3
+import pandas as pd
+import tempfile
 
 app = Flask(__name__)
 
@@ -15,7 +17,6 @@ def c():
 @app.route('/')
 def i():
     return render_template('index.html')
-
 
 # BUSCAR POR DOCUMENTO
 @app.route('/buscar')
