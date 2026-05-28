@@ -1,43 +1,238 @@
-<!doctype html><html><head><meta charset='utf-8'><title>Actualización</title>
-<style>body{font-family:Arial;margin:30px}table{border-collapse:collapse;width:100%;margin-top:15px}th,td{border:1px solid #ccc;padding:8px}button,input,select{padding:6px}</style>
-</head><body>
+<!doctype html>
+
+<html>
+
+<head>
+
+<meta charset='utf-8'>
+
+<title>Actualización</title>
+
+<style>
+
+body{
+    font-family:Arial;
+    margin:30px;
+}
+
+table{
+    border-collapse:collapse;
+    width:100%;
+    margin-top:15px;
+}
+
+th,td{
+    border:1px solid #ccc;
+    padding:8px;
+}
+
+button,input,select{
+    padding:6px;
+}
+
+</style>
+
+</head>
+
+<body>
+
 <h2>Actualización de Ubicaciones</h2>
-<input id='doc' placeholder='Digite Doc. Identidad'><button onclick='buscar()'>Buscar</button>
-<table id='tbl'></table><br><button id='g' style='display:none' onclick='guardar()'>Guardar</button>
+
+<input id='doc' placeholder='Digite Doc. Identidad'>
+
+<button onclick='buscar()'>
+    Buscar
+</button>
+
+<table id='tbl'></table>
+
+<br>
+
+<button id='g' style='display:none' onclick='guardar()'>
+    Guardar
+</button>
+
 <script>
+
 let pisos=[];
+
+
+// BUSCAR
 async function buscar(){
- let doc=document.getElementById('doc').value;
- let r=await fetch('/buscar?doc='+encodeURIComponent(doc));
- let d=await r.json(); pisos=d.pisos;
- let h='<tr><th>Etiqueta</th><th>Descr. Detallada</th><th>Departamento</th><th>Proyecto</th><th>Piso</th><th>Ubicación Detallada</th></tr>';
- for(let row of d.rows){
- h+=`<tr data-rid="${row.rid}">
- <td>${row['Etiqueta']||''}</td>
- <td>${row['Descr. Detallada']||''}</td>
- <td>${row['Departamento']||''}</td>
- <td>${row['Proyecto']||''}</td>
- <td><select onchange="loadU(this)"><option value="">Seleccione</option>${pisos.map(p=>`<option>${p}</option>`).join('')}</select></td>
- <td><select><option value="">Seleccione</option></select></td></tr>`;
- }
- document.getElementById('tbl').innerHTML=h;
- document.getElementById('g').style.display=d.rows.length?'inline':'none';
+
+    let doc=document.getElementById('doc').value;
+
+    let r=await fetch('/buscar?doc='+encodeURIComponent(doc));
+
+    let d=await r.json();
+
+    pisos=d.pisos;
+
+    let h='';
+
+    h+=`
+    <tr>
+        <th>Etiqueta</th>
+        <th>Descr. Detallada</th>
+        <th>Departamento</th>
+        <th>Proyecto</th>
+        <th>Piso</th>
+        <th>Ubicación Detallada</th>
+    </tr>
+    `;
+
+    for(let row of d.rows){
+
+        h+=`
+        <tr data-rid="${row.rid}">
+
+            <td>${row['Etiqueta']||''}</td>
+
+            <td>${row['Descr. Detallada']||''}</td>
+
+            <td>${row['Departamento']||''}</td>
+
+            <td>${row['Proyecto']||''}</td>
+
+            <td>
+
+                <select onchange="loadU(this)">
+
+                    <option value="">
+                        Seleccione
+                    </option>
+
+                    ${pisos.map(p=>`
+                        <option value="${p}">
+                            ${p}
+                        </option>
+                    `).join('')}
+
+                </select>
+
+            </td>
+
+            <td>
+
+                <select>
+
+                    <option value="">
+                        Seleccione
+                    </option>
+
+                </select>
+
+            </td>
+
+        </tr>
+        `;
+    }
+
+    document.getElementById('tbl').innerHTML=h;
+
+    document.getElementById('g').style.display=
+        d.rows.length ? 'inline' : 'none';
 }
+
+
+// CARGAR UBICACIONES
 async function loadU(s){
- let r=await fetch('/ubicaciones?piso='+encodeURIComponent(s.value));
- let d=await r.json();
- let u=s.parentElement.parentElement.cells[5].querySelector('select');
- u.innerHTML='<option value="">Seleccione</option>'+d.map(x=>`<option>${x}</option>`).join('');
+
+    let piso=s.value;
+
+    let r=await fetch(
+        '/ubicaciones?piso='+
+        encodeURIComponent(piso)
+    );
+
+    let d=await r.json();
+
+    let u=s.parentElement
+            .parentElement
+            .cells[5]
+            .querySelector('select');
+
+    u.innerHTML=
+        '<option value="">Seleccione</option>'+
+        d.map(x=>`
+            <option value="${x}">
+                ${x}
+            </option>
+        `).join('');
 }
+
+
+// GUARDAR
 async function guardar(){
- let trs=document.querySelectorAll('#tbl tr[data-rid]'); let ups=[];
- for(let tr of trs){
- let p=tr.cells[4].querySelector('select').value;
- let u=tr.cells[5].querySelector('select').value;
- if(!p||!u){alert('Debe completar todas las filas');return;}
- ups.push({rid:tr.dataset.rid,piso:p,ubicacion:u});
- }
- let r=await fetch('/guardar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({updates:ups})});
- let d=await r.json(); alert(d.msg); location.reload();
+
+    let trs=document.querySelectorAll(
+        '#tbl tr[data-rid]'
+    );
+
+    let ups=[];
+
+    for(let tr of trs){
+
+        let p=tr.cells[4]
+                .querySelector('select')
+                .value;
+
+        let u=tr.cells[5]
+                .querySelector('select')
+                .value;
+
+        // VALIDACION
+        if(!p || !u){
+
+            alert(
+                'Debe completar todas las filas'
+            );
+
+            return;
+        }
+
+        ups.push({
+
+            rid:tr.dataset.rid,
+
+            piso:p,
+
+            ubicacion:u
+
+        });
+    }
+
+    let r=await fetch('/guardar',{
+
+        method:'POST',
+
+        headers:{
+            'Content-Type':'application/json'
+        },
+
+        body:JSON.stringify({
+            updates:ups
+        })
+
+    });
+
+    let d=await r.json();
+
+    alert(d.msg);
+
+    // LIMPIAR FORMULARIO
+    if(d.ok){
+
+        document.getElementById('doc').value='';
+
+        document.getElementById('tbl').innerHTML='';
+
+        document.getElementById('g').style.display='none';
+    }
 }
-</script></body></html>
+
+</script>
+
+</body>
+
+</html>
