@@ -67,7 +67,7 @@ def g():
                 SELECT 1
                 FROM nomenclatura
                 WHERE [Piso] = ?
-                AND [Ubicación Detallada] = ?
+                AND [UBICACIÓN DETALLADA] = ?
                 LIMIT 1
                 ''',
                 (piso, ubicacion)
