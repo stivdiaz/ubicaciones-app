@@ -43,7 +43,16 @@ def excel():
     x = c()
 
     df = pd.read_sql_query(
-        'SELECT * FROM base',
+        '''
+        SELECT
+            [Etiqueta],
+            [Descr. Detallada],
+            [Departamento],
+            [Proyecto],
+            [Piso],
+            [UBICACIÓN DETALLADA]
+        FROM base
+        ''',
         x
     )
 
@@ -62,13 +71,13 @@ def excel():
         df.to_excel(
             writer,
             index=False,
-            sheet_name='BASE'
+            sheet_name='VALIDACION'
         )
 
     return send_file(
         temp.name,
         as_attachment=True,
-        download_name='BASE.xlsx'
+        download_name='VALIDACION.xlsx'
     )
 
 
