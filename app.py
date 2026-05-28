@@ -87,7 +87,7 @@ def g():
                 UPDATE base
                 SET
                     [Piso] = ?,
-                    [Ubicación Detallada] = ?
+                    [UBICACIÓN DETALLADA] = ?
                 WHERE rowid = ?
                 ''',
                 (
