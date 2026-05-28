@@ -27,7 +27,6 @@ def u():
     x.close()
     return jsonify(data)
 @app.route('/guardar', methods=['POST'])
-@app.route('/guardar', methods=['POST'])
 def g():
 
     data = request.get_json()
