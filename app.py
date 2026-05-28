@@ -89,9 +89,10 @@ def g():
 
     data = request.get_json()
 
-    updates = data.get('updates', [])
+    ups = data.get('updates', [])
 
-    if not updates:
+    if not ups:
+
         return jsonify({
             'ok': False,
             'msg': 'No hay datos para guardar'
@@ -99,139 +100,73 @@ def g():
 
     x = c()
 
-    for u in updates:
+    try:
 
-        piso = str(u.get('piso', '')).strip()
-        ubicacion = str(u.get('ubicacion', '')).strip()
-        rid = u.get('rid')
+        for u in ups:
 
-        # VALIDACION
-        if not piso or not ubicacion:
+            piso = str(u.get('piso', '')).strip()
+            ubicacion = str(u.get('ubicacion', '')).strip()
+            rid = u.get('rid')
 
-            x.close()
+            # VALIDACION
+            if not piso or not ubicacion:
 
-            return jsonify({
-                'ok': False,
-                'msg': 'Debe completar todas las filas'
-            }), 400
+                return jsonify({
+                    'ok': False,
+                    'msg': 'Debe completar todas las filas'
+                }), 400
 
-        # VALIDAR UBICACION VS PISO
-        validacion = x.execute(
-            '''
-            SELECT 1
-            FROM nomenclatura
-            WHERE [Piso] = ?
-            AND [Ubicación Detallada] = ?
-            LIMIT 1
-            ''',
-            (piso, ubicacion)
-        ).fetchone()
+            # VALIDAR PISO + UBICACION
+            existe = x.execute(
+                '''
+                SELECT 1
+                FROM nomenclatura
+                WHERE [Piso] = ?
+                AND [Ubicación Detallada] = ?
+                LIMIT 1
+                ''',
+                (piso, ubicacion)
+            ).fetchone()
 
-        if not validacion:
+            if not existe:
 
-            x.close()
+                return jsonify({
+                    'ok': False,
+                    'msg': 'La ubicación no corresponde al piso'
+                }), 400
 
-            return jsonify({
-                'ok': False,
-                'msg': 'La ubicación no corresponde al piso'
-            }), 400
+            # UPDATE
+            x.execute(
+                '''
+                UPDATE base
+                SET
+                    [Piso] = ?,
+                    [UBICACIÓN DETALLADA] = ?
+                WHERE rowid = ?
+                ''',
+                (
+                    piso,
+                    ubicacion,
+                    rid
+                )
+            )
 
-        # GUARDAR
-        x.execute(
-            '''
-            UPDATE base
-            SET
-                [Piso] = ?,
-                [Ubicación Detallada] = ?
-            WHERE rowid = ?
-            ''',
-            (piso, ubicacion, rid)
-        )
+        x.commit()
 
-    x.commit()
-    x.close()
+        return jsonify({
+            'ok': True,
+            'msg': 'Datos guardados correctamente'
+        })
 
-    return jsonify({
-        'ok': True,
-        'msg': 'Datos guardados correctamente'
-    })
+    except Exception as e:
 
+        x.rollback()
 
-# VALIDAR DATOS
-@app.route('/validar')
-def validar():
+        return jsonify({
+            'ok': False,
+            'msg': str(e)
+        }), 500
 
-    x = c()
+    finally:
 
-    rows = x.execute(
-        'SELECT * FROM base'
-    ).fetchall()
-
-    x.close()
-
-    html = '''
-    <html>
-    <head>
-        <title>Validación</title>
-
-        <style>
-
-        body{
-            font-family:Arial;
-            margin:20px;
-        }
-
-        table{
-            border-collapse:collapse;
-            width:100%;
-        }
-
-        th,td{
-            border:1px solid #ccc;
-            padding:8px;
-            font-size:12px;
-        }
-
-        th{
-            background:#f0f0f0;
-        }
-
-        </style>
-
-    </head>
-
-    <body>
-
-    <h2>Datos almacenados</h2>
-
-    <table>
-    '''
-
-    if rows:
-
-        cols = rows[0].keys()
-
-        html += '<tr>'
-
-        for c1 in cols:
-            html += f'<th>{c1}</th>'
-
-        html += '</tr>'
-
-        for r in rows:
-
-            html += '<tr>'
-
-            for c1 in cols:
-                html += f'<td>{r[c1]}</td>'
-
-            html += '</tr>'
-
-    html += '''
-    </table>
-
-    </body>
-    </html>
-    '''
-
-    return html
+        x.close()
