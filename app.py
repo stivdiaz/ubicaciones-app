@@ -34,45 +34,6 @@ def g():
     x.commit();x.close()
     return jsonify({'msg':'Datos guardados correctamente'})
 
-from flask import send_file
-import pandas as pd
-import tempfile
-
-
-@app.route('/excel')
-def excel():
-
-    x = c()
-
-    df = pd.read_sql_query(
-        'SELECT * FROM base',
-        x
-    )
-
-    x.close()
-
-    temp = tempfile.NamedTemporaryFile(
-        delete=False,
-        suffix='.xlsx'
-    )
-
-    with pd.ExcelWriter(
-        temp.name,
-        engine='openpyxl'
-    ) as writer:
-
-        df.to_excel(
-            writer,
-            index=False,
-            sheet_name='BASE'
-        )
-
-    return send_file(
-        temp.name,
-        as_attachment=True,
-        download_name='BASE.xlsx'
-    )
-
 @app.route('/validar')
 def validar():
 
@@ -86,9 +47,7 @@ def validar():
 
     html = '''
     <html>
-
     <head>
-
         <title>Validación</title>
 
         <style>
@@ -111,18 +70,6 @@ def validar():
 
         th{
             background:#f0f0f0;
-            position:sticky;
-            top:0;
-        }
-
-        .btn{
-            background:#1976d2;
-            color:white;
-            border:none;
-            padding:10px 15px;
-            cursor:pointer;
-            border-radius:5px;
-            margin-bottom:15px;
         }
 
         </style>
@@ -132,12 +79,6 @@ def validar():
     <body>
 
     <h2>Datos almacenados</h2>
-
-    <a href="/excel">
-        <button class="btn">
-            Descargar Excel
-        </button>
-    </a>
 
     <table>
     '''
@@ -149,7 +90,6 @@ def validar():
         html += '<tr>'
 
         for c1 in cols:
-
             html += f'<th>{c1}</th>'
 
         html += '</tr>'
@@ -159,19 +99,15 @@ def validar():
             html += '<tr>'
 
             for c1 in cols:
-
                 html += f'<td>{r[c1]}</td>'
 
             html += '</tr>'
 
     html += '''
-
     </table>
 
     </body>
-
     </html>
-
     '''
 
     return html
