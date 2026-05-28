@@ -33,3 +33,16 @@ def g():
         x.execute('UPDATE base SET [PISO] = ?, [UBICACIÓN DETALLADA] = ? WHERE rowid = ?',(u['piso'],u['ubicacion'],u['rid']))
     x.commit();x.close()
     return jsonify({'msg':'Datos guardados correctamente'})
+
+@app.route('/validar')
+def validar():
+
+    conn = get_conn()
+
+    rows = conn.execute('SELECT * FROM base LIMIT 50').fetchall()
+
+    conn.close()
+
+    data = [dict(r) for r in rows]
+
+    return jsonify(data)
