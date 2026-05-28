@@ -34,6 +34,45 @@ def g():
     x.commit();x.close()
     return jsonify({'msg':'Datos guardados correctamente'})
 
+from flask import send_file
+import pandas as pd
+import tempfile
+
+
+@app.route('/excel')
+def excel():
+
+    x = c()
+
+    df = pd.read_sql_query(
+        'SELECT * FROM base',
+        x
+    )
+
+    x.close()
+
+    temp = tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix='.xlsx'
+    )
+
+    with pd.ExcelWriter(
+        temp.name,
+        engine='openpyxl'
+    ) as writer:
+
+        df.to_excel(
+            writer,
+            index=False,
+            sheet_name='BASE'
+        )
+
+    return send_file(
+        temp.name,
+        as_attachment=True,
+        download_name='BASE.xlsx'
+    )
+
 @app.route('/validar')
 def validar():
 
