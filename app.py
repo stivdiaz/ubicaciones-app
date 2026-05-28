@@ -1,3 +1,12 @@
+from flask import Flask, render_template, request, jsonify, send_file
+import sqlite3
+import pandas as pd
+import tempfile
+
+app = Flask(__name__)
+
+DB = 'database.db'
+
 @app.route('/guardar', methods=['POST'])
 def g():
 
