@@ -1,280 +1,124 @@
-from flask import Flask, render_template, request, jsonify, send_file
-import sqlite3
-import pandas as pd
-import tempfile
-app=Flask(__name__)
-DB='database.db'
-def c():
-    x=sqlite3.connect(DB)
-    x.row_factory=sqlite3.Row
-    return x
-@app.route('/')
-def i():
-    return render_template('index.html')
-@app.route('/buscar')
-def b():
-
-    doc = request.args.get('doc','').strip()
-
-    x = c()
-
-    rows = [
-
-        dict(r)
-
-        for r in x.execute(
-
-            '''
-            SELECT
-                rowid as rid,
-                *
-            FROM base
-            WHERE TRIM([Doc. Identidad]) = ?
-            ''',
-
-            (doc,)
-        ).fetchall()
-    ]
-
-    pisos = [
-
-        r[0]
-
-        for r in x.execute(
-
-            '''
-            SELECT DISTINCT [Piso]
-            FROM nomenclatura
-            ORDER BY [Piso]
-            '''
-
-        ).fetchall()
-    ]
-
-    x.close()
-
-    return jsonify({
+<!doctype html><html><head><meta charset='utf-8'><title>Actualización Ciencias</title>
+<style>
+body{
 
-        'rows': rows,
+    font-family:Arial;
 
-        'pisos': pisos
+    margin:30px;
 
-    })
-@app.route('/ubicaciones')
-def u():
-    piso=request.args.get('piso','')
-    x=c()
-    data=[r[0] for r in x.execute('SELECT DISTINCT [Ubicación Detallada] FROM nomenclatura WHERE [Piso] = ? ORDER BY [Ubicación Detallada]',(piso,)).fetchall()]
-    x.close()
-    return jsonify(data)
-@app.route('/guardar', methods=['POST'])
-def g():
-    data=request.get_json()
-    ups=data.get('updates',[])
-    x=c()
-    for u in ups:
-        x.execute('UPDATE base SET [PISO] = ?, [UBICACIÓN DETALLADA] = ? WHERE rowid = ?',(u['piso'],u['ubicacion'],u['rid']))
-    x.commit();x.close()
-    return jsonify({'msg':'Datos guardados correctamente'})
+    background-image:url('/static/fondo.jpg');
 
-# DESCARGAR EXCEL
-@app.route('/excel')
-def excel():
+    background-size:cover;
 
-    x = c()
+    background-position:center;
 
-    df = pd.read_sql_query(
-        '''
-        SELECT
-            [Doc. Identidad],
-            [Etiqueta],
-            [Descr. Detallada],
-            [Departamento],
-            [Proyecto],
-            [Responsable],
-            [Piso],
-            [UBICACIÓN DETALLADA]
-        FROM base
-        ''',
-        x
-    )
+    background-attachment:fixed;
 
-    x.close()
+    position:relative;
 
-    temp = tempfile.NamedTemporaryFile(
-        delete=False,
-        suffix='.xlsx'
-    )
+}
 
-    with pd.ExcelWriter(
-        temp.name,
-        engine='openpyxl'
-    ) as writer:
+/* CAPA DIFUMINADA */
+body::before{
 
-        df.to_excel(
-            writer,
-            index=False,
-            sheet_name='REPORTE'
-        )
+    content:'';
 
-        wb = writer.book
+    position:fixed;
 
-        ws = writer.sheets['REPORTE']
+    top:0;
 
-        from openpyxl.styles import Font, PatternFill
+    left:0;
 
-        # ESTILO ENCABEZADO
-        fill = PatternFill(
-            start_color='D9D9D9',
-            end_color='D9D9D9',
-            fill_type='solid'
-        )
+    width:100%;
 
-        font = Font(
-            bold=True
-        )
+    height:100%;
 
-        # APLICAR ESTILO
-        for cell in ws[1]:
+    background:rgba(255,255,255,0.55);
 
-            cell.fill = fill
+    backdrop-filter:blur(6px);
 
-            cell.font = font
+    z-index:-1;
 
-        # AJUSTAR ANCHO COLUMNAS
-        for col in ws.columns:
+}
 
-            max_length = 0
+table{
 
-            column = col[0].column_letter
+    border-collapse:collapse;
 
-            for cell in col:
+    width:100%;
 
-                try:
+    margin-top:15px;
 
-                    if len(str(cell.value)) > max_length:
+    background:white;
 
-                        max_length = len(str(cell.value))
+}
 
-                except:
-                    pass
+th,td{
 
-            adjusted_width = max_length + 5
+    border:1px solid #ccc;
 
-            ws.column_dimensions[column].width = adjusted_width
+    padding:8px;
 
-    return send_file(
-        temp.name,
-        as_attachment=True,
-        download_name='REPORTE.xlsx'
-    )
+}
 
-# VALIDAR
-@app.route('/validar')
-def validar():
+button,input,select{
 
-    x = c()
+    padding:6px;
 
-    rows = x.execute(
-        'SELECT * FROM base'
-    ).fetchall()
+}
 
-    x.close()
+h2{
 
-    html = '''
+    color:#111;
 
-    <html>
+}
 
-    <head>
-
-        <title>Reporte</title>
-
-        <style>
-
-        body{
-            font-family:Arial;
-            margin:20px;
-        }
-
-        table{
-            border-collapse:collapse;
-            width:100%;
-        }
-
-        th,td{
-            border:1px solid #ccc;
-            padding:8px;
-            font-size:12px;
-        }
-
-        th{
-            background:#f0f0f0;
-            position:sticky;
-            top:0;
-        }
-
-        .btn{
-            background:#1976d2;
-            color:white;
-            border:none;
-            padding:10px 15px;
-            border-radius:5px;
-            cursor:pointer;
-            margin-bottom:20px;
-        }
-
-        </style>
-
-    </head>
-
-    <body>
-
-    <h2>Validación Datos almacenados</h2>
-
-    <a href="/excel">
-
-        <button class="btn">
-
-            Descargar Excel
-
-        </button>
-
-    </a>
-
-    <table>
-
-    '''
-
-    if rows:
-
-        cols = rows[0].keys()
-
-        html += '<tr>'
-
-        for c1 in cols:
-
-            html += f'<th>{c1}</th>'
-
-        html += '</tr>'
-
-        for r in rows:
-
-            html += '<tr>'
-
-            for c1 in cols:
-
-                html += f'<td>{r[c1]}</td>'
-
-            html += '</tr>'
-
-    html += '''
-
-    </table>
-
-    </body>
-
-    </html>
-
-    '''
-
-    return html
+ 
+</style>
+</head><body>
+<h2>Actualización de Ubicaciones Facultad de Ciencias</h2>
+<input id='doc' placeholder='Digite Doc. Identidad'><button onclick='buscar()'>Buscar</button>
+<table id='tbl'></table><br><button id='g' style='display:none' onclick='guardar()'>Guardar</button>
+<script>
+let pisos=[];
+async function buscar(){
+ let doc=document.getElementById('doc').value;
+ let r=await fetch('/buscar?doc='+encodeURIComponent(doc));
+ let d=await r.json(); pisos=d.pisos;
+ let h='<tr><th>Etiqueta</th><th>Descr. Detallada</th><th>Departamento</th><th>Proyecto</th><th>Piso</th><th>Ubicación Detallada</th></tr>';
+ for(let row of d.rows){
+ h+=`<tr data-rid="${row.rid}">
+ <td>${row['Etiqueta']||''}</td>
+ <td>${row['Descr. Detallada']||''}</td>
+ <td>${row['Departamento']||''}</td>
+ <td>${row['Proyecto']||''}</td>
+ <td><select onchange="loadU(this)"><option value="">Seleccione</option>${pisos.map(p=>`<option>${p}</option>`).join('')}</select></td>
+ <td><select><option value="">Seleccione</option></select></td></tr>`;
+ }
+ document.getElementById('tbl').innerHTML=h;
+ document.getElementById('g').style.display=d.rows.length?'inline':'none';
+}
+async function loadU(s){
+ let r=await fetch('/ubicaciones?piso='+encodeURIComponent(s.value));
+ let d=await r.json();
+ let u=s.parentElement.parentElement.cells[5].querySelector('select');
+ u.innerHTML='<option value="">Seleccione</option>'+d.map(x=>`<option>${x}</option>`).join('');
+}
+async function guardar(){
+ let trs=document.querySelectorAll('#tbl tr[data-rid]'); let ups=[];
+ for(let tr of trs){
+ let p=tr.cells[4].querySelector('select').value;
+ let u=tr.cells[5].querySelector('select').value;
+ if(!p||!u){alert('Debe completar todas las filas');return;}
+ ups.push({rid:tr.dataset.rid,piso:p,ubicacion:u});
+ }
+ let r=await fetch('/guardar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({updates:ups})});
+ let d=await r.json(); 
+    alert(d.msg); 
+    document.getElementById('doc').value='';
+
+    document.getElementById('tbl').innerHTML='';
+
+    document.getElementById('g').style.display='none';
+}
+</script></body></html>
