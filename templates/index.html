@@ -92,35 +92,68 @@ async function buscar(){
  <td>${row['Descr. Detallada']||''}</td>
  <td>${row['Departamento']||''}</td>
  <td>${row['Proyecto']||''}</td>
+ <td><select onchange="loadU(this)">
+<option value="">Seleccione</option>
+${pisos.map(p=>`
+<option value="${p}" ${row['Piso']==p?'selected':''}>
+${p}
+</option>
+`).join('')}
+</select></td>
  <td>
+<select>
 
-    <select onchange="loadU(this)">
+${
+row['UBICACIÓN DETALLADA']
 
-        <option value="">
-            Seleccione
-        </option>
+?
 
-        ${pisos.map(p=>`
-            <option value="${p}">
-                ${p}
-            </option>
-        `).join('')}
+`<option selected>
+${row['UBICACIÓN DETALLADA']}
+</option>`
 
-    </select>
+:
 
-</td>
+`<option value="">
+Seleccione
+</option>`
+}
 
-<td>
-
-    <select>
-
-        <option value="">
-            Seleccione
-        </option>
-
-    </select>
-
+</select>
 </td></tr>`;
+
+     if(row['Piso']){
+
+    setTimeout(async()=>{
+
+        let tr=document.querySelector(
+            `tr[data-rid="${row.rid}"]`
+        );
+
+        let u=tr.cells[5]
+            .querySelector('select');
+
+        let r=await fetch(
+            '/ubicaciones?piso='+
+            encodeURIComponent(row['Piso'])
+        );
+
+        let d2=await r.json();
+
+        u.innerHTML=
+            '<option value="">Seleccione</option>'+
+            d2.map(x=>`
+
+                <option value="${x}"
+                ${row['UBICACIÓN DETALLADA']==x?'selected':''}>
+
+                ${x}
+
+                </option>
+
+            `).join('');
+
+    },100);
  }
  document.getElementById('tbl').innerHTML=h;
  document.getElementById('g').style.display=d.rows.length?'inline':'none';
