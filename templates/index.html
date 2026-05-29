@@ -189,8 +189,13 @@ async function loadU(s){
 async function guardar(){
  let trs=document.querySelectorAll('#tbl tr[data-rid]'); let ups=[];
  for(let tr of trs){
- let p=tr.cells[4].querySelector('select').value;
- let u=tr.cells[5].querySelector('select').value;
+ let p=tr.cells[5]
+    .querySelector('select')
+    .value;
+
+let u=tr.cells[6]
+    .querySelector('select')
+    .value;
  if(!p||!u){alert('Debe completar todas las filas');return;}
  ups.push({rid:tr.dataset.rid,piso:p,ubicacion:u});
  }
