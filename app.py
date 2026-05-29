@@ -1,7 +1,5 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify
 import sqlite3
-import pandas as pd
-import tempfile
 app=Flask(__name__)
 DB='database.db'
 def c():
@@ -36,99 +34,6 @@ def g():
     x.commit();x.close()
     return jsonify({'msg':'Datos guardados correctamente'})
 
-# DESCARGAR EXCEL
-@app.route('/excel')
-def excel():
-
-    x = c()
-
-    df = pd.read_sql_query(
-        '''
-        SELECT
-            [Doc. Identidad],
-            [Etiqueta],
-            [Descr. Detallada],
-            [Departamento],
-            [Proyecto],
-            [Responsable],
-            [Piso],
-            [UBICACIÓN DETALLADA]
-        FROM base
-        ''',
-        x
-    )
-
-    x.close()
-
-    temp = tempfile.NamedTemporaryFile(
-        delete=False,
-        suffix='.xlsx'
-    )
-
-    with pd.ExcelWriter(
-        temp.name,
-        engine='openpyxl'
-    ) as writer:
-
-        df.to_excel(
-            writer,
-            index=False,
-            sheet_name='REPORTE'
-        )
-
-        wb = writer.book
-
-        ws = writer.sheets['REPORTE']
-
-        from openpyxl.styles import Font, PatternFill
-
-        # ESTILO ENCABEZADO
-        fill = PatternFill(
-            start_color='D9D9D9',
-            end_color='D9D9D9',
-            fill_type='solid'
-        )
-
-        font = Font(
-            bold=True
-        )
-
-        # APLICAR ESTILO
-        for cell in ws[1]:
-
-            cell.fill = fill
-
-            cell.font = font
-
-        # AJUSTAR ANCHO COLUMNAS
-        for col in ws.columns:
-
-            max_length = 0
-
-            column = col[0].column_letter
-
-            for cell in col:
-
-                try:
-
-                    if len(str(cell.value)) > max_length:
-
-                        max_length = len(str(cell.value))
-
-                except:
-                    pass
-
-            adjusted_width = max_length + 5
-
-            ws.column_dimensions[column].width = adjusted_width
-
-    return send_file(
-        temp.name,
-        as_attachment=True,
-        download_name='REPORTE.xlsx'
-    )
-
-# VALIDAR
 @app.route('/validar')
 def validar():
 
@@ -141,12 +46,9 @@ def validar():
     x.close()
 
     html = '''
-
     <html>
-
     <head>
-
-        <title>Reporte</title>
+        <title>Validación</title>
 
         <style>
 
@@ -168,18 +70,6 @@ def validar():
 
         th{
             background:#f0f0f0;
-            position:sticky;
-            top:0;
-        }
-
-        .btn{
-            background:#1976d2;
-            color:white;
-            border:none;
-            padding:10px 15px;
-            border-radius:5px;
-            cursor:pointer;
-            margin-bottom:20px;
         }
 
         </style>
@@ -188,20 +78,9 @@ def validar():
 
     <body>
 
-    <h2>Validación Datos almacenados</h2>
-
-    <a href="/excel">
-
-        <button class="btn">
-
-            Descargar Excel
-
-        </button>
-
-    </a>
+    <h2>Datos almacenados</h2>
 
     <table>
-
     '''
 
     if rows:
@@ -211,7 +90,6 @@ def validar():
         html += '<tr>'
 
         for c1 in cols:
-
             html += f'<th>{c1}</th>'
 
         html += '</tr>'
@@ -221,19 +99,15 @@ def validar():
             html += '<tr>'
 
             for c1 in cols:
-
                 html += f'<td>{r[c1]}</td>'
 
             html += '</tr>'
 
     html += '''
-
     </table>
 
     </body>
-
     </html>
-
     '''
 
     return html
