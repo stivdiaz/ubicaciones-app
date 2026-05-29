@@ -45,10 +45,12 @@ def excel():
     df = pd.read_sql_query(
         '''
         SELECT
+            [Doc. Identidad],
             [Etiqueta],
             [Descr. Detallada],
             [Departamento],
             [Proyecto],
+            [Responsable],
             [Piso],
             [UBICACIÓN DETALLADA]
         FROM base
@@ -71,15 +73,60 @@ def excel():
         df.to_excel(
             writer,
             index=False,
-            sheet_name='VALIDACION'
+            sheet_name='REPORTE'
         )
+
+        wb = writer.book
+
+        ws = writer.sheets['REPORTE']
+
+        from openpyxl.styles import Font, PatternFill
+
+        # ESTILO ENCABEZADO
+        fill = PatternFill(
+            start_color='D9D9D9',
+            end_color='D9D9D9',
+            fill_type='solid'
+        )
+
+        font = Font(
+            bold=True
+        )
+
+        # APLICAR ESTILO
+        for cell in ws[1]:
+
+            cell.fill = fill
+
+            cell.font = font
+
+        # AJUSTAR ANCHO COLUMNAS
+        for col in ws.columns:
+
+            max_length = 0
+
+            column = col[0].column_letter
+
+            for cell in col:
+
+                try:
+
+                    if len(str(cell.value)) > max_length:
+
+                        max_length = len(str(cell.value))
+
+                except:
+                    pass
+
+            adjusted_width = max_length + 5
+
+            ws.column_dimensions[column].width = adjusted_width
 
     return send_file(
         temp.name,
         as_attachment=True,
-        download_name='VALIDACION.xlsx'
+        download_name='REPORTE.xlsx'
     )
-
 
 # VALIDAR
 @app.route('/validar')
