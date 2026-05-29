@@ -12,13 +12,55 @@ def c():
 def i():
     return render_template('index.html')
 @app.route('/buscar')
+@app.route('/buscar')
 def b():
-    doc=request.args.get('doc','')
-    x=c()
-    rows=[dict(r) for r in x.execute('SELECT rowid rid,* FROM base WHERE [Doc. Identidad] = ?', (doc,)).fetchall()]
-    pisos=[r[0] for r in x.execute('SELECT DISTINCT [Piso] FROM nomenclatura ORDER BY [Piso]').fetchall()]
+
+    doc = request.args.get('doc','').strip()
+
+    x = c()
+
+    rows = [
+
+        dict(r)
+
+        for r in x.execute(
+
+            '''
+            SELECT
+                rowid as rid,
+                *
+            FROM base
+            WHERE TRIM([Doc. Identidad]) = ?
+            ''',
+
+            (doc,)
+        ).fetchall()
+    ]
+
+    pisos = [
+
+        r[0]
+
+        for r in x.execute(
+
+            '''
+            SELECT DISTINCT [Piso]
+            FROM nomenclatura
+            ORDER BY [Piso]
+            '''
+
+        ).fetchall()
+    ]
+
     x.close()
-    return jsonify({'rows':rows,'pisos':pisos})
+
+    return jsonify({
+
+        'rows': rows,
+
+        'pisos': pisos
+
+    })
 @app.route('/ubicaciones')
 def u():
     piso=request.args.get('piso','')
