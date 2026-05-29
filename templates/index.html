@@ -355,19 +355,34 @@ async function guardar(){
 
     let d=await r.json();
 
-    alert(d.msg);
+  alert(d.msg);
 
-    document.getElementById(
-        'doc'
-    ).value='';
+// LIMPIAR DOCUMENTO
+document.getElementById(
+    'doc'
+).value='';
 
-    document.getElementById(
-        'tbl'
-    ).innerHTML='';
+// LIMPIAR TABLA
+document.getElementById(
+    'tbl'
+).innerHTML='';
 
-    document.getElementById(
-        'g'
-    ).style.display='none';
+// OCULTAR BOTON GUARDAR
+document.getElementById(
+    'g'
+).style.display='none';
+
+// LIMPIAR PISO MASIVO
+document.getElementById(
+    'pisoMasivo'
+).selectedIndex = 0;
+
+// LIMPIAR UBICACION MASIVA
+document.getElementById(
+    'ubiMasiva'
+).innerHTML =
+
+    '<option value="">Seleccione Ubicación</option>';
 }
 
 async function cargarUbicacionesMasivas(){
