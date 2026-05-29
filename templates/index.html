@@ -77,6 +77,42 @@ h2{
 </style>
 </head><body>
 <h2>Actualización de Ubicaciones Facultad de Ciencias</h2>
+    <div style="
+margin-top:20px;
+margin-bottom:20px;
+padding:15px;
+background:white;
+border-radius:10px;
+border:1px solid #ccc;
+">
+
+<h3>Actualización Masiva</h3>
+
+<select id="pisoMasivo" onchange="cargarUbicacionesMasivas()">
+
+    <option value="">
+        Seleccione Piso
+    </option>
+
+</select>
+
+<select id="ubiMasiva">
+
+    <option value="">
+        Seleccione Ubicación
+    </option>
+
+</select>
+
+<button onclick="aplicarTodos()">
+    Aplicar a TODOS
+</button>
+
+<button onclick="aplicarSeleccionados()">
+    Aplicar a Seleccionados
+</button>
+
+</div>
 <input id='doc' placeholder='Digite Doc. Identidad'><button onclick='buscar()'>Buscar</button>
 <table id='tbl'></table><br><button id='g' style='display:none' onclick='guardar()'>Guardar</button>
 <script>
@@ -85,9 +121,55 @@ async function buscar(){
  let doc=document.getElementById('doc').value;
  let r=await fetch('/buscar?doc='+encodeURIComponent(doc));
  let d=await r.json(); pisos=d.pisos;
- let h='<tr><th>Etiqueta</th><th>Descr. Detallada</th><th>Departamento</th><th>Proyecto</th><th>Piso</th><th>Ubicación Detallada</th></tr>';
+    document.getElementById('pisoMasivo').innerHTML=
+
+    '<option value="">Seleccione Piso</option>'+
+
+    pisos.map(p=>`
+
+        <option value="${p}">
+            ${p}
+        </option>
+
+    `).join('');
+ let h=`
+<tr>
+
+<th>
+✓
+</th>
+
+<th>
+Etiqueta
+</th>
+
+<th>
+Descr. Detallada
+</th>
+
+<th>
+Departamento
+</th>
+
+<th>
+Proyecto
+</th>
+
+<th>
+Piso
+</th>
+
+<th>
+Ubicación Detallada
+</th>
+
+</tr>
+`;
  for(let row of d.rows){
  h+=`<tr data-rid="${row.rid}">
+<td>
+<input type="checkbox" class="chk">
+</td>
  <td>${row['Etiqueta']||''}</td>
  <td>${row['Descr. Detallada']||''}</td>
  <td>${row['Departamento']||''}</td>
@@ -120,5 +202,114 @@ async function guardar(){
     document.getElementById('tbl').innerHTML='';
 
     document.getElementById('g').style.display='none';
+}
+
+    async function cargarUbicacionesMasivas(){
+
+    let piso=document.getElementById(
+        'pisoMasivo'
+    ).value;
+
+    let r=await fetch(
+        '/ubicaciones?piso='+
+        encodeURIComponent(piso)
+    );
+
+    let d=await r.json();
+
+    document.getElementById(
+        'ubiMasiva'
+    ).innerHTML=
+
+        '<option value="">Seleccione Ubicación</option>'+
+
+        d.map(x=>`
+
+            <option value="${x}">
+                ${x}
+            </option>
+
+        `).join('');
+}
+    function aplicarTodos(){
+
+    let piso=document.getElementById(
+        'pisoMasivo'
+    ).value;
+
+    let ubi=document.getElementById(
+        'ubiMasiva'
+    ).value;
+
+    if(!piso || !ubi){
+
+        alert(
+            'Debe seleccionar piso y ubicación'
+        );
+
+        return;
+    }
+
+    let trs=document.querySelectorAll(
+        '#tbl tr[data-rid]'
+    );
+
+    trs.forEach(tr=>{
+
+        tr.cells[5]
+            .querySelector('select')
+            .value=piso;
+
+        tr.cells[6]
+            .querySelector('select')
+            .innerHTML=
+
+            `<option selected>
+                ${ubi}
+            </option>`;
+    });
+}
+    function aplicarSeleccionados(){
+
+    let piso=document.getElementById(
+        'pisoMasivo'
+    ).value;
+
+    let ubi=document.getElementById(
+        'ubiMasiva'
+    ).value;
+
+    if(!piso || !ubi){
+
+        alert(
+            'Debe seleccionar piso y ubicación'
+        );
+
+        return;
+    }
+
+    let trs=document.querySelectorAll(
+        '#tbl tr[data-rid]'
+    );
+
+    trs.forEach(tr=>{
+
+        let chk=tr.querySelector('.chk');
+
+        if(chk.checked){
+
+            tr.cells[5]
+                .querySelector('select')
+                .value=piso;
+
+            tr.cells[6]
+                .querySelector('select')
+                .innerHTML=
+
+                `<option selected>
+                    ${ubi}
+                </option>`;
+        }
+    });
 }
 </script></body></html>
