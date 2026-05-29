@@ -32,7 +32,11 @@ def g():
     ups=data.get('updates',[])
     x=c()
     for u in ups:
-        x.execute('UPDATE base SET [PISO] = ?, [UBICACIÓN DETALLADA] = ? WHERE rowid = ?',(u['piso'],u['ubicacion'],u['rid']))
+        x.execute('UPDATE base SET
+    [Piso] = ?,
+    [UBICACIÓN DETALLADA] = ?,
+    fecha_registro = datetime('now','localtime')
+WHERE rowid = ?',(u['piso'],u['ubicacion'],u['rid']))
     x.commit();x.close()
     return jsonify({'msg':'Datos guardados correctamente'})
 
@@ -53,11 +57,14 @@ def excel():
             [Responsable],
             [Piso],
             [UBICACIÓN DETALLADA]
+            fecha_registro
         FROM base
         ''',
         x
     )
-
+    df.rename(columns={
+    'fecha_registro':'Fecha Registro'
+}, inplace=True)
     x.close()
 
     temp = tempfile.NamedTemporaryFile(
