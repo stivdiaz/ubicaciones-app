@@ -117,7 +117,7 @@ def excel():
             [Proyecto],
             [Responsable],
             [Piso],
-            [UBICACIÓN DETALLADA]
+            [UBICACIÓN DETALLADA],
             fecha_registro
         FROM base
         ''',
