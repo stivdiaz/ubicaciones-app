@@ -32,11 +32,19 @@ def g():
     ups=data.get('updates',[])
     x=c()
     for u in ups:
-        x.execute('UPDATE base SET
-    [Piso] = ?,
-    [UBICACIÓN DETALLADA] = ?,
-    fecha_registro = datetime('now','localtime')
-WHERE rowid = ?',(u['piso'],u['ubicacion'],u['rid']))
+        x.execute('UPDATE base
+    SET
+        [Piso] = ?,
+        [UBICACIÓN DETALLADA] = ?,
+        fecha_registro = datetime('now','localtime')
+    WHERE rowid = ?
+    ''',
+    (
+        piso,
+        ubicacion,
+        rid
+    )
+)
     x.commit();x.close()
     return jsonify({'msg':'Datos guardados correctamente'})
 
