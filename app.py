@@ -32,7 +32,9 @@ def g():
     ups=data.get('updates',[])
     x=c()
     for u in ups:
-        x.execute('UPDATE base
+        x.execute(
+    '''
+    UPDATE base
     SET
         [Piso] = ?,
         [UBICACIÓN DETALLADA] = ?,
