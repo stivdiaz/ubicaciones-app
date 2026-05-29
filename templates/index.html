@@ -118,101 +118,179 @@ border:1px solid #ccc;
 <script>
 let pisos=[];
 async function buscar(){
- let doc=document.getElementById('doc').value;
- let r=await fetch('/buscar?doc='+encodeURIComponent(doc));
- let d=await r.json(); pisos=d.pisos;
-    document.getElementById('pisoMasivo').innerHTML=
 
-    '<option value="">Seleccione Piso</option>'+
+    let doc=document.getElementById('doc').value;
 
-    pisos.map(p=>`
+    let r=await fetch(
+        '/buscar?doc='+
+        encodeURIComponent(doc)
+    );
 
-        <option value="${p}">
-            ${p}
-        </option>
+    let d=await r.json();
 
-    `).join('');
- let h=`
+    pisos=d.pisos;
 
-<tr>
+    // LLENAR PISOS MASIVOS
+    document.getElementById(
+        'pisoMasivo'
+    ).innerHTML=
 
-<th>
-✓
-</th>
+        '<option value="">Seleccione Piso</option>'+
 
-<th>
-Etiqueta
-</th>
+        pisos.map(p=>`
 
-<th>
-Descr. Detallada
-</th>
+            <option value="${p}">
+                ${p}
+            </option>
 
-<th>
-Departamento
-</th>
+        `).join('');
 
-<th>
-Proyecto
-</th>
+    let h=`
 
-<th>
-Piso
-</th>
+    <tr>
 
-<th>
-Ubicación Detallada
-</th>
+        <th>✓</th>
 
-</tr>
+        <th>Etiqueta</th>
 
-`;
+        <th>Descr. Detallada</th>
 
-<th>
-✓
-</th>
+        <th>Departamento</th>
 
-<th>
-Etiqueta
-</th>
+        <th>Proyecto</th>
 
-<th>
-Descr. Detallada
-</th>
+        <th>Piso</th>
 
-<th>
-Departamento
-</th>
+        <th>Ubicación Detallada</th>
 
-<th>
-Proyecto
-</th>
+    </tr>
+    `;
 
-<th>
-Piso
-</th>
+    for(let row of d.rows){
 
-<th>
-Ubicación Detallada
-</th>
+        h+=`
 
-</tr>
-`;
- for(let row of d.rows){
- h+=`<tr data-rid="${row.rid}">
+        <tr data-rid="${row.rid}">
 
-<td>
-    <input type="checkbox" class="chk">
-</td>
-<input type="checkbox" class="chk">
-</td>
- <td>${row['Etiqueta']||''}</td>
- <td>${row['Descr. Detallada']||''}</td>
- <td>${row['Departamento']||''}</td>
- <td>${row['Proyecto']||''}</td>
- <td><select onchange="loadU(this)"><option value="">Seleccione</option>${pisos.map(p=>`<option>${p}</option>`).join('')}</select></td>
- <td><select><option value="">Seleccione</option></select></td></tr>`;
- }
+            <td>
+
+                <input
+                    type="checkbox"
+                    class="chk"
+                >
+
+            </td>
+
+            <td>
+                ${row['Etiqueta']||''}
+            </td>
+
+            <td>
+                ${row['Descr. Detallada']||''}
+            </td>
+
+            <td>
+                ${row['Departamento']||''}
+            </td>
+
+            <td>
+                ${row['Proyecto']||''}
+            </td>
+
+            <td>
+
+                <select onchange="loadU(this)">
+
+                    <option value="">
+                        Seleccione
+                    </option>
+
+                    ${pisos.map(p=>`
+
+                        <option value="${p}"
+                        ${row['Piso']==p?'selected':''}>
+
+                            ${p}
+
+                        </option>
+
+                    `).join('')}
+
+                </select>
+
+            </td>
+
+            <td>
+
+                <select>
+
+                    <option value="">
+                        Seleccione
+                    </option>
+
+                </select>
+
+            </td>
+
+        </tr>
+        `;
+    }
+
+    document.getElementById(
+        'tbl'
+    ).innerHTML=h;
+
+    // CARGAR UBICACIONES YA GUARDADAS
+    for(let row of d.rows){
+
+        if(row['Piso']){
+
+            let tr=document.querySelector(
+                `tr[data-rid="${row.rid}"]`
+            );
+
+            if(tr){
+
+                let r2=await fetch(
+                    '/ubicaciones?piso='+
+                    encodeURIComponent(
+                        row['Piso']
+                    )
+                );
+
+                let data=await r2.json();
+
+                let u=tr.cells[6]
+                    .querySelector('select');
+
+                u.innerHTML=
+
+                    '<option value="">Seleccione</option>'+
+
+                    data.map(x=>`
+
+                        <option value="${x}"
+                        ${row['UBICACIÓN DETALLADA']==x?'selected':''}>
+
+                            ${x}
+
+                        </option>
+
+                    `).join('');
+            }
+        }
+    }
+
+    document.getElementById(
+        'g'
+    ).style.display=
+
+        d.rows.length
+        ?
+        'inline'
+        :
+        'none';
+}
  console.log(d.rows);   
  document.getElementById('tbl').innerHTML=h;
  document.getElementById('g').style.display=d.rows.length?'inline':'none';
