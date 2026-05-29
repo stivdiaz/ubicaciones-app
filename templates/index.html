@@ -181,10 +181,29 @@ Ubicación Detallada
  document.getElementById('g').style.display=d.rows.length?'inline':'none';
 }
 async function loadU(s){
- let r=await fetch('/ubicaciones?piso='+encodeURIComponent(s.value));
- let d=await r.json();
- let u=s.parentElement.parentElement.cells[5].querySelector('select');
- u.innerHTML='<option value="">Seleccione</option>'+d.map(x=>`<option>${x}</option>`).join('');
+
+    let r=await fetch(
+        '/ubicaciones?piso='+
+        encodeURIComponent(s.value)
+    );
+
+    let d=await r.json();
+
+    let u=s.parentElement
+            .parentElement
+            .cells[6]
+            .querySelector('select');
+
+    u.innerHTML=
+        '<option value="">Seleccione</option>'+
+
+        d.map(x=>`
+
+            <option value="${x}">
+                ${x}
+            </option>
+
+        `).join('');
 }
 async function guardar(){
  let trs=document.querySelectorAll('#tbl tr[data-rid]'); let ups=[];
@@ -237,24 +256,6 @@ let u=tr.cells[6]
         `).join('');
 }
     function aplicarTodos(){
-
-    let piso=document.getElementById(
-        'pisoMasivo'
-    ).value;
-
-    let ubi=document.getElementById(
-        'ubiMasiva'
-    ).value;
-
-    if(!piso || !ubi){
-
-        alert(
-            'Debe seleccionar piso y ubicación'
-        );
-
-        return;
-    }
-
     let trs=document.querySelectorAll(
         '#tbl tr[data-rid]'
     );
@@ -293,6 +294,35 @@ let u=tr.cells[6]
         return;
     }
 
+    let trs=document.querySelectorAll(
+        '#tbl tr[data-rid]'
+    );
+
+    trs.forEach(tr=>{
+
+        let chk=tr.querySelector('.chk');
+
+        if(chk.checked){
+
+            // PISO
+            tr.cells[5]
+                .querySelector('select')
+                .value=piso;
+
+            // UBICACION
+            let uSelect=tr.cells[6]
+                .querySelector('select');
+
+            if(uSelect){
+
+                uSelect.innerHTML=
+                    `<option value="${ubi}" selected>
+                        ${ubi}
+                    </option>`;
+            }
+        }
+    });
+}
     let trs=document.querySelectorAll(
         '#tbl tr[data-rid]'
     );
