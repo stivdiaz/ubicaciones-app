@@ -12,7 +12,6 @@ def c():
 def i():
     return render_template('index.html')
 @app.route('/buscar')
-@app.route('/buscar')
 def b():
 
     doc = request.args.get('doc','').strip()
