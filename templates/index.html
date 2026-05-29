@@ -1,128 +1,128 @@
-<!doctype html><html><head><meta charset='utf-8'><title>Actualización Ciencias</title>
+<!doctype html>
+<html>
+
+<head>
+
+<meta charset="utf-8">
+
+<title>Actualización Ciencias</title>
+
 <style>
+
 body{
-
     font-family:Arial;
-
     margin:30px;
-
     background-image:url('/static/fondo.jpg');
-
     background-size:cover;
-
     background-position:center;
-
     background-attachment:fixed;
-
-    position:relative;
-
 }
 
-/* CAPA DIFUMINADA */
 body::before{
-
     content:'';
-
     position:fixed;
-
     top:0;
-
     left:0;
-
     width:100%;
-
     height:100%;
-
     background:rgba(255,255,255,0.55);
-
     backdrop-filter:blur(6px);
-
     z-index:-1;
-
 }
 
 table{
-
     border-collapse:collapse;
-
     width:100%;
-
     margin-top:15px;
-
     background:white;
-
 }
 
 th,td{
-
     border:1px solid #ccc;
-
     padding:8px;
-
 }
 
 button,input,select{
-
     padding:6px;
-
 }
 
-h2{
-
-    color:#111;
-
+.panel{
+    background:white;
+    padding:15px;
+    border-radius:10px;
+    border:1px solid #ccc;
+    margin-bottom:20px;
 }
 
- 
 </style>
-</head><body>
-<h2>Actualización de Ubicaciones Facultad de Ciencias</h2>
-    <div style="
-margin-top:20px;
-margin-bottom:20px;
-padding:15px;
-background:white;
-border-radius:10px;
-border:1px solid #ccc;
-">
+
+</head>
+
+<body>
+
+<h2>
+Actualización de Ubicaciones Facultad de Ciencias
+</h2>
+
+<div class="panel">
 
 <h3>Actualización Masiva</h3>
 
-<select id="pisoMasivo" onchange="cargarUbicacionesMasivas()">
+<select id="pisoMasivo"
+onchange="cargarUbicacionesMasivas()">
 
-    <option value="">
-        Seleccione Piso
-    </option>
+<option value="">
+Seleccione Piso
+</option>
 
 </select>
 
 <select id="ubiMasiva">
 
-    <option value="">
-        Seleccione Ubicación
-    </option>
+<option value="">
+Seleccione Ubicación
+</option>
 
 </select>
 
 <button onclick="aplicarTodos()">
-    Aplicar a TODOS
+Aplicar a TODOS
 </button>
 
 <button onclick="aplicarSeleccionados()">
-    Aplicar a Seleccionados
+Aplicar a Seleccionados
 </button>
 
 </div>
-<input id='doc' placeholder='Digite Doc. Identidad'><button onclick='buscar()'>Buscar</button>
-<table id='tbl'></table><br><button id='g' style='display:none' onclick='guardar()'>Guardar</button>
-<script>
+
+<input id="doc"
+placeholder="Digite Doc. Identidad">
+
+<button onclick="buscar()">
+Buscar
+</button>
+
+<table id="tbl"></table>
+
+<br>
+
+<button id="g"
+style="display:none"
+onclick="guardar()">
+
+Guardar
+
+</button>
+
 <script>
 
 let pisos=[];
 
 async function buscar(){
 
-    let doc=document.getElementById('doc').value;
+    let doc=document.getElementById(
+        'doc'
+    ).value;
 
     let r=await fetch(
         '/buscar?doc='+
@@ -133,7 +133,6 @@ async function buscar(){
 
     pisos=d.pisos;
 
-    // PISOS MASIVOS
     document.getElementById(
         'pisoMasivo'
     ).innerHTML=
@@ -179,21 +178,13 @@ async function buscar(){
                 <input type="checkbox" class="chk">
             </td>
 
-            <td>
-                ${row['Etiqueta']||''}
-            </td>
+            <td>${row['Etiqueta']||''}</td>
 
-            <td>
-                ${row['Descr. Detallada']||''}
-            </td>
+            <td>${row['Descr. Detallada']||''}</td>
 
-            <td>
-                ${row['Departamento']||''}
-            </td>
+            <td>${row['Departamento']||''}</td>
 
-            <td>
-                ${row['Proyecto']||''}
-            </td>
+            <td>${row['Proyecto']||''}</td>
 
             <td>
 
@@ -238,7 +229,6 @@ async function buscar(){
         'tbl'
     ).innerHTML=h;
 
-    // CARGAR UBICACIONES
     for(let row of d.rows){
 
         if(row['Piso']){
@@ -247,35 +237,32 @@ async function buscar(){
                 `tr[data-rid="${row.rid}"]`
             );
 
-            if(tr){
+            let r2=await fetch(
+                '/ubicaciones?piso='+
+                encodeURIComponent(
+                    row['Piso']
+                )
+            );
 
-                let r2=await fetch(
-                    '/ubicaciones?piso='+
-                    encodeURIComponent(
-                        row['Piso']
-                    )
-                );
+            let data=await r2.json();
 
-                let data=await r2.json();
+            let u=tr.cells[6]
+                .querySelector('select');
 
-                let u=tr.cells[6]
-                    .querySelector('select');
+            u.innerHTML=
 
-                u.innerHTML=
+                '<option value="">Seleccione</option>'+
 
-                    '<option value="">Seleccione</option>'+
+                data.map(x=>`
 
-                    data.map(x=>`
+                    <option value="${x}"
+                    ${row['UBICACIÓN DETALLADA']==x?'selected':''}>
 
-                        <option value="${x}"
-                        ${row['UBICACIÓN DETALLADA']==x?'selected':''}>
+                        ${x}
 
-                            ${x}
+                    </option>
 
-                        </option>
-
-                    `).join('');
-            }
+                `).join('');
         }
     }
 
@@ -300,9 +287,9 @@ async function loadU(s){
     let d=await r.json();
 
     let u=s.parentElement
-            .parentElement
-            .cells[6]
-            .querySelector('select');
+        .parentElement
+        .cells[6]
+        .querySelector('select');
 
     u.innerHTML=
 
@@ -345,11 +332,8 @@ async function guardar(){
         }
 
         ups.push({
-
             rid:tr.dataset.rid,
-
             piso:p,
-
             ubicacion:u
         });
     }
@@ -443,10 +427,10 @@ function aplicarTodos(){
             .querySelector('select')
             .value=piso;
 
-        let uSelect=tr.cells[6]
-            .querySelector('select');
+        tr.cells[6]
+            .querySelector('select')
+            .innerHTML=
 
-        uSelect.innerHTML=
             `<option value="${ubi}" selected>
                 ${ubi}
             </option>`;
@@ -486,10 +470,10 @@ function aplicarSeleccionados(){
                 .querySelector('select')
                 .value=piso;
 
-            let uSelect=tr.cells[6]
-                .querySelector('select');
+            tr.cells[6]
+                .querySelector('select')
+                .innerHTML=
 
-            uSelect.innerHTML=
                 `<option value="${ubi}" selected>
                     ${ubi}
                 </option>`;
@@ -498,4 +482,6 @@ function aplicarSeleccionados(){
 }
 
 </script>
-</body></html>
+
+</body>
+</html>
