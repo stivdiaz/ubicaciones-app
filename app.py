@@ -71,7 +71,7 @@ def g():
                 SET
                     [Piso] = ?,
                     [UBICACIÓN DETALLADA] = ?,
-                    fecha_registro = datetime('now','localtime')
+                    fecha_registro = date('now','localtime')
                 WHERE rowid = ?
                 ''',
                 (
